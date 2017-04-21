@@ -8,7 +8,7 @@ import os
 import pickle
 from Utils import *
 
-PROJ_PATH=os.path.expanduser("~/OvarianCancer")
+#PROJ_PATH=os.path.expanduser("")
 N_SLIDES=21
 N_LABELS=37
 
@@ -29,8 +29,8 @@ def GenArrs(path):
   return labels,byTypes,byPixels
 
 def GetFileNames(dirLoc):
-  dirPath=PROJ_PATH+dirLoc
-  filenames=[dirPath+"/"+file for file in os.listdir(dirPath) if 'Summary' not in file and '.txt' in file]
+  #dirPath=PROJ_PATH+dirLoc
+  filenames=[dirLoc+""+file for file in os.listdir(dirLoc) if 'Summary' not in file and '.txt' in file]
   return filenames
 
 def PickleAll():
@@ -38,12 +38,12 @@ def PickleAll():
   for i,path in enumerate(filePaths):
     lablels,byTypes,byPixels=GenArrs(path)
     data={'labels':lablels,'ab':byTypes,'pix':byPixels}
-    out=open(PROJ_PATH+"/Processed/slide"+str(i)+".p","wb")
+    out=open("Processed/slide"+str(i)+".p","wb")
     pickle.dump(data,out)
     out.close()
 
 def LoadSlide(iSlide):
-  return pickle.load(open(PROJ_PATH+"/Processed/slide"+str(iSlide)+".p","rb"))
+  return pickle.load(open("Processed/slide"+str(iSlide)+".p","rb"))
 
 def LoadAll():
   print("loading data")
