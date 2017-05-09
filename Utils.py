@@ -231,8 +231,8 @@ def GenBatchSet(inputs,outputs,batchSize):
   nEntries=inputs.shape[0]
   indices=np.arange(0,nEntries)
   np.random.shuffle(indices)
-  batchInputs=inputs[indices].reshape((nEntries//batchSize,batchSize,inputs.shape[1]))
-  batchOutputs=outputs[indices].reshape((nEntries//batchSize,batchSize,outputs.shape[1]))
+  batchInputs=inputs[indices].reshape([nEntries//batchSize,batchSize]+inputs.shape[1:])
+  batchOutputs=outputs[indices].reshape([nEntries//batchSize,batchSize]+outputs.shape[1:])
   return batchInputs,batchOutputs
 
 def GenMissingDataColumns(data):
@@ -379,6 +379,39 @@ class FullyConnectedNetworkWithMissingOutputs:
       outMasksTF=tf.placeholder(tf.float32,[None,nOutputs],name='outMasksPL')
       self.GradsTF=tf.gradients(self.OutputLayerTF,inputsTF,outMasksTF)
 
+      #variable initialization
+      self.InitVarsTF=tf.global_variables_initializer()
+    def CreateTFInterface():
+      return TFinterface(self.graph,self.OutputLayerTF,self.ErrorTF,self.TrainTF,self.GradsTF,self.InitVarsTF,'inputsPL','outputsPL','dropoutPL','outMasksPL')
+
+class ConvolutionalNetwork:
+  def __init__(self,layerSpecs,inputShape,nOutputs):
+    self.sess=None
+    self.graph=tf.Graph()
+    with self.graph.as_default():
+      inputsTF=tf.placeholder(tf.float32,[None]+[inputShape],name='inputsPL')
+      correctOutputsTF=tf.placeholder(tf.float32,[None,nOutputs],name='outputsPL')
+      dropoutProbTF=tf.placeholder(tf.float32,name='dropoutPL')
+      LastLayerTF=inputsTF
+      for layerSpec in layerSpecs:
+        if len(layerSpec)==1:#adding fully connected layer [nNeurons]
+          LastLayerTF=slim.fully_connected(LastLayerTF,num_outputs=layerSpec[0])
+          tf.nn.dropout(LastLayerTF,dropoutProbTF)
+        if len(layerSpec)==2:#adding maxpool layer [dimensions,stride]
+          LastLayerTF=slim.max_pool2d(LastLayerTF,kernel_size=[layerSpec[0],layerSpec[0]],stride=layerSpec[1],padding="SAME")
+        if len(layerSpec)==3:#adding conv2d layer [nFilters,dimensions,stride]
+          LastLayerTF=slim.conv2d(LastLayerTF,num_outputs=layerSpec[0],kernel_size=[layerSpec[1],layerSpec[1]],stride=layerSpec[2],padding="SAME")
+          tf.nn.dropout(LastLayerTF,dropoutProbTF)
+
+      LastLayerTF = slim.fully_connected(LastLayerTF,nOutputs,activation_fn=None)
+      self.OutputLayerTF=tf.nn.softmax(LastLayerTF)
+      #error function
+      self.ErrorTF=tf.nn.softmax_cross_entropy_with_logits(labels=correctOutputsTF,logits=LastLayerTF)
+      #training
+      self.TrainTF=tf.train.AdamOptimizer().minimize(self.ErrorTF)
+      #getting gradient values
+      outMasksTF=tf.placeholder(tf.float32,[None,nOutputs],name='outMasksPL')
+      self.GradsTF=tf.gradients(self.OutputLayerTF,inputsTF,outMasksTF)
       #variable initialization
       self.InitVarsTF=tf.global_variables_initializer()
     def CreateTFInterface():
