@@ -346,6 +346,9 @@ class FullyConnectedNetwork:
       #variable initialization
       self.InitVarsTF=tf.global_variables_initializer()
 
+    def CreateTFInterface():
+      return TFinterface(self.graph,self.OutputLayerTF,self.ErrorTF,self.TrainTF,self.GradsTF,self.InitVarsTF,'inputsPL','outputsPL','dropoutPL','outMasksPL')
+
 class FullyConnectedNetworkWithMissingOutputs:
   def __init__(self,layerSizes,nInputs,nOutputs):
     #bInputsWithNan and bOutsWithNan are arrays with true if that output column has nan in it
@@ -378,3 +381,5 @@ class FullyConnectedNetworkWithMissingOutputs:
 
       #variable initialization
       self.InitVarsTF=tf.global_variables_initializer()
+    def CreateTFInterface():
+      return TFinterface(self.graph,self.OutputLayerTF,self.ErrorTF,self.TrainTF,self.GradsTF,self.InitVarsTF,'inputsPL','outputsPL','dropoutPL','outMasksPL')
