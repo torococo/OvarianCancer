@@ -14,7 +14,8 @@ from matplotlib.backends.backend_pdf import PdfPages # Library to save plots as 
 # Control which of the operations the script should carry out
 DO_PICKLE_AND_FIND_DIMENSION = False
 DO_ANALYSE_DIMENSIONS = False
-DO_CROP = True
+DO_CROP = False
+DO_TRANSFORM = True
 
 # ========================================================================
 # Function to get coreID from file name via regex matching
@@ -160,8 +161,8 @@ if DO_CROP:
     CANONICAL_DIMS_X = 600
     CANONICAL_DIMS_Y = 600
     N_STAINS = 37
-    outcomeArr  = np.genfromtxt('Data/coreToSensitivityMap.csv', delimiter=',') # Get Array with patient outcomes
-    rawFileNames = dtp.GetFileNames('Data/PatientsWithOutcomes/TxtFiles/') # Get file names
+    outcomeArr  = np.genfromtxt('data/patientsWithOutcomes/coreToSensitivityMap_122Cores.csv', delimiter=',') # Get Array with patient outcomes
+    rawFileNames = dtp.GetFileNames('data/patientsWithOutcomes/txtFiles/') # Get file names
 
     for i,inFName in enumerate(rawFileNames):
 
@@ -229,10 +230,32 @@ if DO_CROP:
         np.save(outName,processedImg)
 
 # ========================================================================
-# Collect all the numpy arrays and save to disk using the pytables package. This generates a binary file that can be
-# read in very efficiently. (See: http://www.h5py.org and http://stackoverflow.com/questions/9619199/best-way-to-preserve-numpy-arrays-on-disk)
+# Transform the data
+if DO_TRANSFORM:
+    outcomeArr  = np.genfromtxt('data/patientsWithOutcomes/coreToSensitivityMap_122Cores.csv', delimiter=',') # Get Array with patient outcomes
+    rawFileNames = dtp.GetFileNames('data/patientsWithOutcomes/txtFiles/') # Get file names
 
+    for i,inFName in enumerate(rawFileNames):
 
+        # Extract coreID
+        coreId = getCoreId(inFName)
+        # coreId = 73 # Provide specific core
+
+        print(str(i+1) +" of "+str(len(rawFileNames))+" - Transforming core "+str(coreId))
+
+        # Load the data
+        image = np.load("data/patientsWithOutcomes/npArraysCropped/core_"+str(coreId)+"_Cropped.npy")
+
+        # Transform the image
+        processedImg = np.log1p(image)
+
+        # Plot to PDF
+        fName = "Data/PatientsWithOutcomes/pdfsLogTransformed/core_"+str(coreId)+"_Log"+".pdf"
+        plotToPdf(processedImg,fName)
+
+        # Save the numpy array
+        outName = "Data/PatientsWithOutcomes/npArraysLogTransformed/core_"+str(coreId)+"_Log"+".npy"
+        np.save(outName,processedImg)
 
 # ========================================================================
 # Other stuff

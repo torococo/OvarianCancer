@@ -17,13 +17,14 @@ CANONICAL_DIMS = 600
 N_STAINS = 37
 CORE_TO_OUTCOME_MAP = np.genfromtxt('data/patientsWithOutcomes/coreToSensitivityMap_122Cores.csv', delimiter=',') # Get Array with patient outcomes
 
-BATCH_SIZE = 4#10
-N_TRAINING_STEPS = 1#1000
+BATCH_SIZE = 10
+N_TRAINING_STEPS = 1000
 DROPOUT_PROB = 0.5
 
-VERBOSE = True
 DIRNAME = 'data/patientsWithOutcomes/npArraysLogTransformed'
-MODEL_NAME = "alexNet"
+MODEL_NAME = "simpleNet"
+VERBOSE = True
+SAVE_MODEL_INTERVAL = 10
 
 # ========================================================
 # Function to get coreID from file name via regex matching
@@ -50,7 +51,7 @@ def GetAllCoreIds(dirName):
     for coreFile in dataFiles:
         ret.append(GetCoreId(coreFile))
 
-    return ret
+    return np.array(ret)
 
 # Function to load all the data in the directory 'dirName' into a single numpy array
 def LoadData(dirName,coreIDs,transformName=None):
@@ -68,20 +69,25 @@ def LoadData(dirName,coreIDs,transformName=None):
     return inputArr, outcomeArr
 
 # Function to partition data into training, validation and testing
-def PartitionData(coreIdxVec,partitionSet=[0.8,0.1,0.1],bShuffle=False):
-    if sum(partitionSet) != 1: raise Exception("The relative partition sizes need to add up to 1")
+def PartitionData(coreIdxVec,fracs=[0.8,0,0.2],abs=None,bShuffle=False):
+    if abs==None and sum(fracs) != 1: raise Exception("The relative partition sizes need to add up to 1")
     nCores = len(coreIdxVec)
     indices = np.arange(0,nCores)
     if bShuffle: np.random.shuffle(indices) # Reshuffle the images in the dataset so to assign them to the different groups randomly
 
     # Convert fractions to numbers
-    nTraining = int(partitionSet[0]*nCores)
-    nValid = int(partitionSet[1]*nCores)
-    nTest = nCores - nTraining - nValid
+    if abs==None:
+        nTraining = int(fracs[0]*nCores)
+        nValid = int(fracs[1]*nCores)
+        nTest = nCores - nTraining - nValid
+    else:
+        nTraining = abs[0]
+        nValid = abs[1]
+        nTest = abs[2]
 
-    trainingSet = indices[0:nTraining] #{'Cores': inputArr[indices[0:nTraining],:,:,:], 'Outcomes': outcomeArr[indices[0:nTraining],:,:]}
-    validSet = indices[nTraining:(nTraining+nValid)] #{'Cores': inputArr[indices[nTraining:(nTraining+nValid)],:,:,:], 'Outcomes': inputArr[indices[nTraining:(nTraining+nValid)],:,:]}
-    testingSet = indices[(nTraining+nValid):]
+    trainingSet = coreIdxVec[indices[0:nTraining]] #{'Cores': inputArr[indices[0:nTraining],:,:,:], 'Outcomes': outcomeArr[indices[0:nTraining],:,:]}
+    validSet = coreIdxVec[indices[nTraining:(nTraining+nValid)]] #{'Cores': inputArr[indices[nTraining:(nTraining+nValid)],:,:,:], 'Outcomes': inputArr[indices[nTraining:(nTraining+nValid)],:,:]}
+    testingSet = coreIdxVec[indices[(nTraining+nValid):]]
     return trainingSet, validSet, testingSet
 
 # ========================================================
@@ -89,13 +95,12 @@ def PartitionData(coreIdxVec,partitionSet=[0.8,0.1,0.1],bShuffle=False):
 if VERBOSE:
     print("============== CNN Training ============================")
     print("Loading Data...")
-cores = GetAllCoreIds(DIRNAME)[:10] # Get the cores in the directory
-inputArr, outcomeArr = LoadData(DIRNAME,cores,"_Log") # Load all images to RAM
+cores = GetAllCoreIds(DIRNAME) # Get the cores in the directory
 if VERBOSE: print("Done.")
 
 
 # Split into input and output data
-trainingSet, validSet, testingSet = PartitionData(cores,partitionSet=[0.8,0,0.2],bShuffle=True) # Returns indices for each set
+trainingSet, validSet, testingSet = PartitionData(cores,abs=[100,10,12],bShuffle=True) # Returns cores ids for each set
 
 # Generate the CNN
 # Convolutional layer [nFilters,dimensions,stride]
@@ -118,34 +123,63 @@ if VERBOSE:
     print("Start Training:")
     print("---------------------------")
 
-errVec = [] # List with the mean error at each epoch (full iteration through all the training data
+nBatches = len(trainingSet)/BATCH_SIZE # Number of batches per epoch
+resArr = np.zeros((N_TRAINING_STEPS,4)) # List with the mean error at each epoch (full iteration through all the training data
+
 for i in range(N_TRAINING_STEPS):
 
+    # Partition training data into batches
+    batchVec,_ = Utils.GenBatchSet(trainingSet,trainingSet,BATCH_SIZE)
+
+    startEpoch = time.time() # Record time for epoch
+
     # Train for one epoch
-    err=myInterface.GenAndRunBatchTraining(inputArr[trainingSet],outcomeArr[trainingSet],batchSize=BATCH_SIZE,nInputSweeps=1,dropKeepProb=DROPOUT_PROB,verbose=False)
+    meanTimePerBatch = 0
+    for iBatch, batch in enumerate(batchVec):
+        startBatch = time.time() # Record time taken by batch
+        if VERBOSE: print("Epoch "+str(i)+" of "+str(N_TRAINING_STEPS)+" ------------------ Batch"+str(iBatch)+":"+str(batch))
+        inputArr, outcomeArr = LoadData(DIRNAME,batch,"_Log") # Load all images to RAM
+        trainOut,err,trainRes = myInterface.Train(inputArr,outcomeArr,DROPOUT_PROB)
+        endBatch = time.time()
+        meanTimePerBatch += (endBatch-startBatch)
+
+    # Estimate avg time a batch takes (for profiling)
+    meanTimePerBatch = meanTimePerBatch/nBatches
+
+    # Validate
+    inputArr, outcomeArr = LoadData(DIRNAME,cores[validSet],"_Log") # Load all images to RAM
+    _,_,validAccuracy = myInterface.Test(inputArr,outcomeArr)
+
+    endEpoch = time.time()
 
     # The GenAndRunBatchTraining() method returns a an array with the error for each image in the training set.
     # To generate a summary statistics from this, take the mean across all images in the training set.
-    errVec.append(np.mean(err))
-    if VERBOSE: print("Epoch "+str(i)+" of "+str(N_TRAINING_STEPS)+" - Error: "+str(errVec[i]))
+    err=np.mean(err)
 
-    # Save the results
-    np.savetxt("trainingResults/trainingError_" + MODEL_NAME + ".csv", errVec, fmt='%10.16f', delimiter=',', newline='\n') # Save the training errors
+    # Report performance for this epoch
+    if VERBOSE: print("Epoch "+str(i)+" of "+str(N_TRAINING_STEPS)+" - Error: "+str(err)+" - Validation Accuracy: "+str(validAccuracy*100)+"%"+" - Time Taken: "+str(endEpoch-startEpoch)+"s - Avg Time per Batch: "+str(meanTimePerBatch)+"s")
+
+    # Save the results to file
+    resArr[i,:] = [i, err, validAccuracy, endEpoch-startEpoch, meanTimePerBatch]
+    np.savetxt("trainingResults/trainingError_" + MODEL_NAME + ".csv", resArr, fmt='%10.16f', delimiter=',', newline='\n') # Save the training errors
+
+    # Save the model
+    if i%SAVE_MODEL_INTERVAL == 0: myNet.Saver.save(myInterface.sess, "trainingResults/" + MODEL_NAME)
+
+
 
 
 # Test it
 if VERBOSE:
     print("---------------------------")
     print("Perform Test")
+inputArr, outcomeArr = LoadData(DIRNAME,cores[testingSet],"_Log") # Load all images to RAM
 _,testError,testAccuracy = myInterface.Test(inputArr[testingSet],outcomeArr[testingSet])
 if VERBOSE: print("Achieved: "+str(testAccuracy*100)+"% Accuracy")
 
 # Save the results
 if VERBOSE: print("Saving Results...")
 np.savetxt("trainingResults/testResults_" + MODEL_NAME + ".csv", [testError[1], testAccuracy], fmt='%10.16f', delimiter=',', header="") # Save the training errors
-
-# Save the model
-myNet.Saver.save(myInterface.sess, "trainingResults/" + MODEL_NAME)
 
 # Plot the training error
 axs=Utils.GenAxs(1,1)
@@ -186,6 +220,10 @@ if VERBOSE:
  #    pp.close()
  #    plt.close()
  #
+
+
+# Train for one epoch XXX This does the batching automatically, but needs all the data in RAM XXX
+# err=myInterface.GenAndRunBatchTraining(inputArr[trainingSet],outcomeArr[trainingSet],batchSize=BATCH_SIZE,nInputSweeps=1,dropKeepProb=DROPOUT_PROB,verbose=False)
 
 
 

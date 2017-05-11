@@ -220,7 +220,7 @@ def SeparateData(inputs,outputs,trainProp,batchSize,bShuffle):
   if inputs.shape[0]!=outputs.shape[0]: raise Exception("inputs and outputs must have the same number of rows!")
   nEntries=inputs.shape[0]
   nTraining=((nEntries*trainProp)//batchSize)*batchSize
-  indices=np.arange(0,nEntries)
+  indices=np.arange(0,nEntries,dtype=np.int)
   if bShuffle:
     np.random.shuffle(indices)
   return[inputs[indices[0:nTraining]],outputs[indices[0:nTraining]]],[inputs[indices[nTraining:]],outputs[indices[nTraining:]]]
@@ -231,8 +231,8 @@ def GenBatchSet(inputs,outputs,batchSize):
   nEntries=inputs.shape[0]
   indices=np.arange(0,nEntries)
   np.random.shuffle(indices)
-  batchInputs=inputs[indices].reshape([nEntries//batchSize,batchSize]+inputs.shape[1:])
-  batchOutputs=outputs[indices].reshape([nEntries//batchSize,batchSize]+outputs.shape[1:])
+  batchInputs=inputs[indices].reshape([nEntries//batchSize,batchSize]+list(inputs.shape[1:]))
+  batchOutputs=outputs[indices].reshape([nEntries//batchSize,batchSize]+list(outputs.shape[1:]))
   return batchInputs,batchOutputs
 
 def GenMissingDataColumns(data):
@@ -256,12 +256,13 @@ def MinSecString(seconds):
   return mins+":"+secs
 
 class TFinterface:
-  def __init__(self,graph,OutputTensor,ErrorTensor,TrainingTensor,GradientTensor,InitVarsFunction,inputsPlaceholderName,outputsPlaceholderName,dropoutPlaceholderName,gradientMasksPlaceholderName):
+  def __init__(self,graph,OutputTensor,ErrorTensor,TrainingTensor,GradientTensor,AccuracyTensor,InitVarsFunction,inputsPlaceholderName,outputsPlaceholderName,dropoutPlaceholderName,gradientMasksPlaceholderName):
     self.graph=graph
     self.OutputTF=OutputTensor
     self.ErrorTF=ErrorTensor
     self.TrainTF=TrainingTensor
     self.GradientTF=GradientTensor
+    self.AccuracyTF=AccuracyTensor
     self.InitVarsTF=InitVarsFunction
     self.sInputsPL=inputsPlaceholderName
     self.sOutputsPL=outputsPlaceholderName
@@ -278,22 +279,35 @@ class TFinterface:
     return outputs,error,trainRes
 
   def Test(self,testIn,testOut):
-    outputs,error=self.sess.run((self.OutputTF,self.ErrorTF),feed_dict={self.sInputsPL+":0":testIn,self.sOutputsPL+":0":testOut,self.sDropoutPL+":0":1})
-    return outputs,error
+    outputs,error,accuracy=self.sess.run((self.OutputTF,self.ErrorTF,self.AccuracyTF),feed_dict={self.sInputsPL+":0":testIn,self.sOutputsPL+":0":testOut,self.sDropoutPL+":0":1})
+    return outputs,error,accuracy
 
   def GetGradientValues(self,inputSet,outputSet,outputMask):
     masks=np.tile(outputMask,(outputSet.shape[0],1))
     gradVals=self.sess.run(self.GradientTF,feed_dict={self.sInputsPL+":0":inputSet,self.sOutputsPL+":0":outputSet,self.sDropoutPL+":0":1,self.sGradientMasksPL+":0":masks})
     return np.asarray(gradVals[0])
 
-  def GenAndRunBatchTraining(self,trainInputs,trainOutputs,batchSize,nInputSweeps,dropKeepProb):
+  def GenAndRunBatchTraining(self,trainInputs,trainOutputs,batchSize,nInputSweeps,dropKeepProb,verbose=False):
     errorVals=[]
     for sweep in range(nInputSweeps):
+      if(verbose):print("Sweep "+str(sweep)+" started")
       Batches=GenBatchSet(trainInputs,trainOutputs,batchSize)
       for iBatch in range(len(Batches[0])):
         trainOut,error,trainRes=self.Train(Batches[0][iBatch],Batches[1][iBatch],dropKeepProb)
         errorVals.append(error)
+      if(verbose):print("finished Training Sweeps")
     return errorVals
+
+  def SaveGraph(self,pathToFile):
+    # self.Saver.save(myInterface.sess, "trainingResults/" + MODEL_NAME)
+    # self.graph.Saver = tf.train.import_meta_graph(pathToFile+".meta") # Instantiate the saver
+    # self.graph.Saver.restore(self.sess, pathToFile) # Loads the graph
+    pass
+
+  def ImportGraph(self,pathToFile):
+    self.graph.Saver = tf.train.import_meta_graph(pathToFile+".meta") # Instantiate the saver
+    self.graph.Saver.restore(self.sess, pathToFile) # Loads the graph
+
 
 def SumGradients(gradientValues):
   return np.sum(np.abs(gradientValues),axis=0)
@@ -389,12 +403,16 @@ class ConvolutionalNetwork:
     self.sess=None
     self.graph=tf.Graph()
     with self.graph.as_default():
-      inputsTF=tf.placeholder(tf.float32,[None]+[inputShape],name='inputsPL')
+      inputsTF=tf.placeholder(tf.float32,[None]+inputShape,name='inputsPL')
       correctOutputsTF=tf.placeholder(tf.float32,[None,nOutputs],name='outputsPL')
       dropoutProbTF=tf.placeholder(tf.float32,name='dropoutPL')
       LastLayerTF=inputsTF
-      for layerSpec in layerSpecs:
+      for i,layerSpec in enumerate(layerSpecs):
+        print("Layer "+str(i)+" shape "+str(LastLayerTF.get_shape()))
         if len(layerSpec)==1:#adding fully connected layer [nNeurons]
+          arr=np.array(LastLayerTF.get_shape()[1:].as_list())
+          dims=[-1,np.prod(arr)]
+          LastLayerTF=tf.reshape(LastLayerTF,dims)
           LastLayerTF=slim.fully_connected(LastLayerTF,num_outputs=layerSpec[0])
           tf.nn.dropout(LastLayerTF,dropoutProbTF)
         if len(layerSpec)==2:#adding maxpool layer [dimensions,stride]
@@ -403,16 +421,31 @@ class ConvolutionalNetwork:
           LastLayerTF=slim.conv2d(LastLayerTF,num_outputs=layerSpec[0],kernel_size=[layerSpec[1],layerSpec[1]],stride=layerSpec[2],padding="SAME")
           tf.nn.dropout(LastLayerTF,dropoutProbTF)
 
+      arr=np.array(LastLayerTF.get_shape()[1:].as_list())
+      dims=[-1,np.prod(arr)]
+      LastLayerTF=tf.reshape(LastLayerTF,dims)
       LastLayerTF = slim.fully_connected(LastLayerTF,nOutputs,activation_fn=None)
+      print("Final FC "+" shape "+str(LastLayerTF.get_shape()))
+      self.Saver=tf.train.Saver()
+
       self.OutputLayerTF=tf.nn.softmax(LastLayerTF)
+
       #error function
       self.ErrorTF=tf.nn.softmax_cross_entropy_with_logits(labels=correctOutputsTF,logits=LastLayerTF)
+
+      #
+      self.Correct_prediction = tf.equal(tf.argmax(self.OutputLayerTF,1), tf.argmax(correctOutputsTF,1))
+      self.AccuracyTF = tf.reduce_mean(tf.cast(self.Correct_prediction, tf.float32))
+
       #training
       self.TrainTF=tf.train.AdamOptimizer().minimize(self.ErrorTF)
+
       #getting gradient values
       outMasksTF=tf.placeholder(tf.float32,[None,nOutputs],name='outMasksPL')
       self.GradsTF=tf.gradients(self.OutputLayerTF,inputsTF,outMasksTF)
+
       #variable initialization
       self.InitVarsTF=tf.global_variables_initializer()
-    def CreateTFInterface():
-      return TFinterface(self.graph,self.OutputLayerTF,self.ErrorTF,self.TrainTF,self.GradsTF,self.InitVarsTF,'inputsPL','outputsPL','dropoutPL','outMasksPL')
+
+  def CreateTFInterface(self):
+    return TFinterface(self.graph,self.OutputLayerTF,self.ErrorTF,self.TrainTF,self.GradsTF,self.AccuracyTF,self.InitVarsTF,'inputsPL','outputsPL','dropoutPL','outMasksPL')

@@ -3,7 +3,7 @@
 
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 import os
 import pickle
 from Utils import *
@@ -116,10 +116,10 @@ def PlotAllLabel(allDat,iLabel,nLogs=0,nSlide=None):
       PlotAB(axs[i],data,str(i)+":"+str(j)+":"+label,j,nLogs)
   plt.show()
 
-data=LoadAll()
-for i in range(N_LABELS):
-  PlotAllLabel(data,i,1)
-#PickleAll()
+# data=LoadAll()
+# for i in range(N_LABELS):
+#   PlotAllLabel(data,i,1)
+# #PickleAll()
 
 #allDat=All1D()
 
