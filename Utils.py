@@ -429,7 +429,7 @@ class ConvolutionalNetwork:
       self.OutputLayerTF=tf.nn.softmax(LastLayerTF)
 
       #error function
-      self.ErrorTF=tf.nn.softmax_cross_entropy_with_logits(labels=correctOutputsTF,logits=LastLayerTF)
+      self.ErrorTF=tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=correctOutputsTF,logits=LastLayerTF))
 
       #
       self.Correct_prediction = tf.equal(tf.argmax(self.OutputLayerTF,1), tf.argmax(correctOutputsTF,1))

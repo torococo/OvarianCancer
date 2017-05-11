@@ -17,14 +17,14 @@ CANONICAL_DIMS = 600
 N_STAINS = 37
 CORE_TO_OUTCOME_MAP = np.genfromtxt('data/patientsWithOutcomes/coreToSensitivityMap_122Cores.csv', delimiter=',') # Get Array with patient outcomes
 
-BATCH_SIZE = 25
-N_TRAINING_STEPS = 5
+BATCH_SIZE = 20
+N_TRAINING_STEPS = 250
 DROPOUT_PROB = 0.5
 
 DIRNAME = 'data/patientsWithOutcomes/npArraysLogTransformed'
 MODEL_NAME = "simpleNet"
 VERBOSE = True
-SAVE_MODEL_INTERVAL = 10
+SAVE_MODEL_INTERVAL = 1
 
 # ========================================================
 # Function to get coreID from file name via regex matching
@@ -135,11 +135,14 @@ for i in range(N_TRAINING_STEPS):
 
     # Train for one epoch
     meanTimePerBatch = 0
+    err = 0
     for iBatch, batch in enumerate(batchVec):
         startBatch = time.time() # Record time taken by batch
         if VERBOSE: print("Epoch "+str(i)+" of "+str(N_TRAINING_STEPS)+" ------------------ Batch "+str(iBatch)) #+":"+str(batch))
         inputArr, outcomeArr = LoadData(DIRNAME,batch,"_Log") # Load all images to RAM
-        trainOut,err,trainRes = myInterface.Train(inputArr,outcomeArr,DROPOUT_PROB)
+        trainOut,crossEntropy,trainRes = myInterface.Train(inputArr,outcomeArr,DROPOUT_PROB)
+        print("Logits: "+str(trainOut)+" - Correct Labels: " +str(outcomeArr)+" - Entropy: "+str(crossEntropy))
+        err = err+crossEntropy
         endBatch = time.time()
         meanTimePerBatch += (endBatch-startBatch)
 
@@ -154,7 +157,7 @@ for i in range(N_TRAINING_STEPS):
 
     # The GenAndRunBatchTraining() method returns a an array with the error for each image in the training set.
     # To generate a summary statistics from this, take the mean across all images in the training set.
-    err=np.mean(err)
+    err = err/nBatches
 
     # Report performance for this epoch
     if VERBOSE: print("Epoch "+str(i)+" of "+str(N_TRAINING_STEPS)+" - Error: "+str(err)+" - Validation Accuracy: "+str(validAccuracy*100)+"%"+" - Time Taken: "+str(endEpoch-startEpoch)+"s - Avg Time per Batch: "+str(meanTimePerBatch)+"s")
@@ -164,7 +167,7 @@ for i in range(N_TRAINING_STEPS):
     np.savetxt("trainingResults/trainingError_" + MODEL_NAME + ".csv", resArr, fmt='%10.16f', delimiter=',', newline='\n') # Save the training errors
 
     # Save the model
-    if i%SAVE_MODEL_INTERVAL == 0: myInterface.SaveGraph("trainingResults/" + MODEL_NAME) #myNet.Saver.save(myInterface.sess, "trainingResults/" + MODEL_NAME)
+    if i%SAVE_MODEL_INTERVAL == 0: myNet.Saver.save(myInterface.sess, "trainingResults/" + MODEL_NAME) #myInterface.SaveGraph("trainingResults/" + MODEL_NAME) #
 
 
 
