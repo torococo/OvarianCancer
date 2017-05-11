@@ -17,8 +17,8 @@ CANONICAL_DIMS = 600
 N_STAINS = 37
 CORE_TO_OUTCOME_MAP = np.genfromtxt('data/patientsWithOutcomes/coreToSensitivityMap_122Cores.csv', delimiter=',') # Get Array with patient outcomes
 
-BATCH_SIZE = 10
-N_TRAINING_STEPS = 1000
+BATCH_SIZE = 25
+N_TRAINING_STEPS = 5
 DROPOUT_PROB = 0.5
 
 DIRNAME = 'data/patientsWithOutcomes/npArraysLogTransformed'
@@ -124,7 +124,7 @@ if VERBOSE:
     print("---------------------------")
 
 nBatches = len(trainingSet)/BATCH_SIZE # Number of batches per epoch
-resArr = np.zeros((N_TRAINING_STEPS,4)) # List with the mean error at each epoch (full iteration through all the training data
+resArr = np.zeros((N_TRAINING_STEPS,5)) # List with the mean error at each epoch (full iteration through all the training data
 
 for i in range(N_TRAINING_STEPS):
 
@@ -137,7 +137,7 @@ for i in range(N_TRAINING_STEPS):
     meanTimePerBatch = 0
     for iBatch, batch in enumerate(batchVec):
         startBatch = time.time() # Record time taken by batch
-        if VERBOSE: print("Epoch "+str(i)+" of "+str(N_TRAINING_STEPS)+" ------------------ Batch"+str(iBatch)+":"+str(batch))
+        if VERBOSE: print("Epoch "+str(i)+" of "+str(N_TRAINING_STEPS)+" ------------------ Batch "+str(iBatch)) #+":"+str(batch))
         inputArr, outcomeArr = LoadData(DIRNAME,batch,"_Log") # Load all images to RAM
         trainOut,err,trainRes = myInterface.Train(inputArr,outcomeArr,DROPOUT_PROB)
         endBatch = time.time()
@@ -147,7 +147,7 @@ for i in range(N_TRAINING_STEPS):
     meanTimePerBatch = meanTimePerBatch/nBatches
 
     # Validate
-    inputArr, outcomeArr = LoadData(DIRNAME,cores[validSet],"_Log") # Load all images to RAM
+    inputArr, outcomeArr = LoadData(DIRNAME,validSet,"_Log") # Load all images to RAM
     _,_,validAccuracy = myInterface.Test(inputArr,outcomeArr)
 
     endEpoch = time.time()
@@ -164,7 +164,7 @@ for i in range(N_TRAINING_STEPS):
     np.savetxt("trainingResults/trainingError_" + MODEL_NAME + ".csv", resArr, fmt='%10.16f', delimiter=',', newline='\n') # Save the training errors
 
     # Save the model
-    if i%SAVE_MODEL_INTERVAL == 0: myNet.Saver.save(myInterface.sess, "trainingResults/" + MODEL_NAME)
+    if i%SAVE_MODEL_INTERVAL == 0: myInterface.SaveGraph("trainingResults/" + MODEL_NAME) #myNet.Saver.save(myInterface.sess, "trainingResults/" + MODEL_NAME)
 
 
 
@@ -173,8 +173,8 @@ for i in range(N_TRAINING_STEPS):
 if VERBOSE:
     print("---------------------------")
     print("Perform Test")
-inputArr, outcomeArr = LoadData(DIRNAME,cores[testingSet],"_Log") # Load all images to RAM
-_,testError,testAccuracy = myInterface.Test(inputArr[testingSet],outcomeArr[testingSet])
+inputArr, outcomeArr = LoadData(DIRNAME,testingSet,"_Log") # Load all images to RAM
+_,testError,testAccuracy = myInterface.Test(inputArr,outcomeArr)
 if VERBOSE: print("Achieved: "+str(testAccuracy*100)+"% Accuracy")
 
 # Save the results
@@ -182,18 +182,18 @@ if VERBOSE: print("Saving Results...")
 np.savetxt("trainingResults/testResults_" + MODEL_NAME + ".csv", [testError[1], testAccuracy], fmt='%10.16f', delimiter=',', header="") # Save the training errors
 
 # Plot the training error
-axs=Utils.GenAxs(1,1)
-pp = PdfPages("trainingResults/" + MODEL_NAME + ".pdf")
-Utils.PlotLine(axs[0],np.arange(len(errVec)),errVec,"r-")
-plt.title("Training Error")
-plt.ylabel('Error')
-plt.xlabel('Epoch')
-
-# Save to pdf
-f = plt.gcf()
-pp.savefig(f)
-pp.close()
-plt.close(f)
+# axs=Utils.GenAxs(1,1)
+# pp = PdfPages("trainingResults/" + MODEL_NAME + ".pdf")
+# Utils.PlotLine(axs[0],np.arange(len(errVec)),errVec,"r-")
+# plt.title("Training Error")
+# plt.ylabel('Error')
+# plt.xlabel('Epoch')
+#
+# # Save to pdf
+# f = plt.gcf()
+# pp.savefig(f)
+# pp.close()
+# plt.close(f)
 
 if VERBOSE:
     print("Done.")

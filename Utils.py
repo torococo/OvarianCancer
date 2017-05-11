@@ -256,7 +256,7 @@ def MinSecString(seconds):
   return mins+":"+secs
 
 class TFinterface:
-  def __init__(self,graph,OutputTensor,ErrorTensor,TrainingTensor,GradientTensor,AccuracyTensor,InitVarsFunction,inputsPlaceholderName,outputsPlaceholderName,dropoutPlaceholderName,gradientMasksPlaceholderName):
+  def __init__(self,graph,OutputTensor,ErrorTensor,TrainingTensor,GradientTensor,AccuracyTensor,InitVarsFunction,saverHandle,inputsPlaceholderName,outputsPlaceholderName,dropoutPlaceholderName,gradientMasksPlaceholderName):
     self.graph=graph
     self.OutputTF=OutputTensor
     self.ErrorTF=ErrorTensor
@@ -264,6 +264,7 @@ class TFinterface:
     self.GradientTF=GradientTensor
     self.AccuracyTF=AccuracyTensor
     self.InitVarsTF=InitVarsFunction
+    self.Saver=saverHandle
     self.sInputsPL=inputsPlaceholderName
     self.sOutputsPL=outputsPlaceholderName
     self.sDropoutPL=dropoutPlaceholderName
@@ -299,10 +300,7 @@ class TFinterface:
     return errorVals
 
   def SaveGraph(self,pathToFile):
-    # self.Saver.save(myInterface.sess, "trainingResults/" + MODEL_NAME)
-    # self.graph.Saver = tf.train.import_meta_graph(pathToFile+".meta") # Instantiate the saver
-    # self.graph.Saver.restore(self.sess, pathToFile) # Loads the graph
-    pass
+    self.Saver.save(self.sess, pathToFile)
 
   def ImportGraph(self,pathToFile):
     self.graph.Saver = tf.train.import_meta_graph(pathToFile+".meta") # Instantiate the saver
@@ -448,4 +446,4 @@ class ConvolutionalNetwork:
       self.InitVarsTF=tf.global_variables_initializer()
 
   def CreateTFInterface(self):
-    return TFinterface(self.graph,self.OutputLayerTF,self.ErrorTF,self.TrainTF,self.GradsTF,self.AccuracyTF,self.InitVarsTF,'inputsPL','outputsPL','dropoutPL','outMasksPL')
+    return TFinterface(self.graph,self.OutputLayerTF,self.ErrorTF,self.TrainTF,self.GradsTF,self.AccuracyTF,self.InitVarsTF,self.Saver,'inputsPL','outputsPL','dropoutPL','outMasksPL')
