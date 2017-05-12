@@ -2,7 +2,7 @@
 # Proof of concept 2 layer CNN on the fluidigm data
 # ========================================================
 
-import tensorflow as tf
+# import tensorflow as tf
 import time
 
 import Utils
@@ -170,8 +170,6 @@ for i in range(N_TRAINING_STEPS):
     if i%SAVE_MODEL_INTERVAL == 0: myNet.Saver.save(myInterface.sess, "trainingResults/" + MODEL_NAME) #myInterface.SaveGraph("trainingResults/" + MODEL_NAME) #
 
 
-
-
 # Test it
 if VERBOSE:
     print("---------------------------")
@@ -185,18 +183,29 @@ if VERBOSE: print("Saving Results...")
 np.savetxt("trainingResults/testResults_" + MODEL_NAME + ".csv", [testError[1], testAccuracy], fmt='%10.16f', delimiter=',', header="") # Save the training errors
 
 # Plot the training error
-# axs=Utils.GenAxs(1,1)
-# pp = PdfPages("trainingResults/" + MODEL_NAME + ".pdf")
-# Utils.PlotLine(axs[0],np.arange(len(errVec)),errVec,"r-")
+axs=Utils.GenAxs(1,1)
+pp = PdfPages("trainingResults/" + MODEL_NAME + ".pdf")
+
 # plt.title("Training Error")
-# plt.ylabel('Error')
-# plt.xlabel('Epoch')
-#
-# # Save to pdf
-# f = plt.gcf()
-# pp.savefig(f)
-# pp.close()
-# plt.close(f)
+plt.ylabel('Log(Cross Entropy)')
+plt.xlabel('Epoch')
+Utils.PlotLine(axs[0],resArr[:,0],np.log(resArr[:,1]),"r-")
+
+# Save to pdf
+f = plt.gcf()
+pp.savefig(f)
+plt.close(f)
+
+axs=Utils.GenAxs(1,1)
+plt.ylabel('Classification Error')
+plt.xlabel('Epoch')
+Utils.PlotLine(axs[0],resArr[:,0],resArr[:,2],"r-")
+
+# Save to pdf
+f = plt.gcf()
+pp.savefig(f)
+plt.close(f)
+pp.close()
 
 if VERBOSE:
     print("Done.")
