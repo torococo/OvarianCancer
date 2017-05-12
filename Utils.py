@@ -405,6 +405,7 @@ class ConvolutionalNetwork:
       correctOutputsTF=tf.placeholder(tf.float32,[None,nOutputs],name='outputsPL')
       dropoutProbTF=tf.placeholder(tf.float32,name='dropoutPL')
       LastLayerTF=inputsTF
+      self.layers=[]
       for i,layerSpec in enumerate(layerSpecs):
         print("Layer "+str(i)+" shape "+str(LastLayerTF.get_shape()))
         if len(layerSpec)==1:#adding fully connected layer [nNeurons]
@@ -418,11 +419,13 @@ class ConvolutionalNetwork:
         if len(layerSpec)==3:#adding conv2d layer [nFilters,dimensions,stride]
           LastLayerTF=slim.conv2d(LastLayerTF,num_outputs=layerSpec[0],kernel_size=[layerSpec[1],layerSpec[1]],stride=layerSpec[2],padding="SAME")
           tf.nn.dropout(LastLayerTF,dropoutProbTF)
+        self.layers.append(LastLayerTF)
 
       arr=np.array(LastLayerTF.get_shape()[1:].as_list())
       dims=[-1,np.prod(arr)]
       LastLayerTF=tf.reshape(LastLayerTF,dims)
       LastLayerTF = slim.fully_connected(LastLayerTF,nOutputs,activation_fn=None)
+      self.layers.append(LastLayerTF)
       print("Final FC "+" shape "+str(LastLayerTF.get_shape()))
       self.Saver=tf.train.Saver()
 
