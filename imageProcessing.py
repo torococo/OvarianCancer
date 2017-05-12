@@ -61,7 +61,7 @@ def plotToPdf(image,fName=None,CoreId=None):
 
     for stain in range(37):
         plt.imshow(image[:,:,stain])
-        plt.title("Core: "+str(coreId)+", Label:"+markerLabels[stain])
+        plt.title("Core: "+str(CoreId)+", Label:"+markerLabels[stain])
         pp.savefig(f)
 
     # Close the files and clean up
