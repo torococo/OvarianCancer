@@ -167,7 +167,7 @@ def GenRandomArchitecture(MAX_CONV_LAYERS, FILTER_NUMBERS_ARRAY, FILTER_SIZES_AR
 
 # ========================================================
 # Function to train a given CNN on given fluidigm data
-def TrainAndTestCNN(cnnArchitecture, dataDir, trainingSet, validSet, testingSet, coreToOutcomeMap, nEpochs, batchSize, dropOutProb=0.5, modelName="CNN", verbose=True, saveModelInterval=5):
+def TrainAndTestCNN(cnnArchitecture, dataDir, trainingSet, validSet, testingSet, coreToOutcomeMap, nEpochs, batchSize, dropOutProb=0.5, outDir="trainingResults/",modelName="CNN", verbose=True, saveModelInterval=5):
 
     # Generate the CNN
     if verbose: print("Creating CNN ...")
@@ -226,10 +226,10 @@ def TrainAndTestCNN(cnnArchitecture, dataDir, trainingSet, validSet, testingSet,
 
         # Save the results to file
         resArr[i,:] = [i, err, validAccuracy, endEpoch-startEpoch, meanTimePerBatch]
-        np.savetxt("trainingResults/trainingError_" + modelName + ".csv", resArr, fmt='%10.16f', delimiter=',', newline='\n') # Save the training errors
+        np.savetxt(outDir + "trainingError_" + modelName + ".csv", resArr, fmt='%10.16f', delimiter=',', newline='\n') # Save the training errors
 
         # Save the model
-        if i%saveModelInterval == 0: myNet.Saver.save(myInterface.sess, "trainingResults/" + modelName) #myInterface.SaveGraph("trainingResults/" + MODEL_NAME) #
+        if i%saveModelInterval == 0: myNet.Saver.save(myInterface.sess, outDir + modelName) #myInterface.SaveGraph("trainingResults/" + MODEL_NAME) #
 
 
 
@@ -240,10 +240,6 @@ def TrainAndTestCNN(cnnArchitecture, dataDir, trainingSet, validSet, testingSet,
     inputArr, outcomeArr = LoadData(dataDir,testingSet, coreToOutcomeMap,"_Log") # Load all images to RAM
     _,testError,testAccuracy = myInterface.Test(inputArr,outcomeArr)
     if verbose: print("Achieved: "+str(testAccuracy*100)+"% Accuracy")
-
-    # Save the results
-    if verbose: print("Saving Results...")
-    np.savetxt("trainingResults/testResults_" + modelName + ".csv", [testError[1], testAccuracy], fmt='%10.16f', delimiter=',', header="") # Save the training errors
 
     if verbose:
         print("Done.")
