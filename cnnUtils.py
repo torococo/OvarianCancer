@@ -167,15 +167,10 @@ def GenRandomArchitecture(MAX_CONV_LAYERS, FILTER_NUMBERS_ARRAY, FILTER_SIZES_AR
 
 # ========================================================
 # Function to train a given CNN on given fluidigm data
-def TrainAndTestCNN(cnnArchitecture, dataDir, trainingSet, validSet, testingSet, coreToOutcomeMap, nEpochs, batchSize, dropOutProb=0.5, outDir="trainingResults/",modelName="CNN", verbose=True, saveModelInterval=5):
-
-    # Generate the CNN
-    if verbose: print("Creating CNN ...")
-    myNet = Utils.ConvolutionalNetwork(cnnArchitecture,[CANONICAL_DIMS,CANONICAL_DIMS,N_STAINS],2)
-
+def TrainAndTestNetwork(networkHandle, dataDir, trainingSet, validSet, testingSet, coreToOutcomeMap, nEpochs, batchSize, dropOutProb=0.5, outDir="trainingResults/",modelName="CNN", verbose=True, saveModelInterval=5):
     # Set up the interface
     if verbose: print("Starting the Interface...")
-    myInterface = myNet.CreateTFInterface()
+    myInterface = networkHandle.CreateTFInterface()
 
     # Run it
     myInterface.StartSession()
@@ -222,14 +217,14 @@ def TrainAndTestCNN(cnnArchitecture, dataDir, trainingSet, validSet, testingSet,
         err = err/nBatches
 
         # Report performance for this epoch
-        if verbose: print("Epoch "+str(i)+" of "+str(nEpochs)+" - Error: "+str(err)+" - Validation Accuracy: "+str(validAccuracy*100)+"%"+" - Time Taken: "+str(endEpoch-startEpoch)+"s - Avg Time per Batch: "+str(meanTimePerBatch)+"s")
+        if verbose: print("Epoch "+str(i)+" of "+str(nEpochs)+" - Error: "+str(err)+" - Validation Classification Error: "+str(validAccuracy*100)+"%"+" - Time Taken: "+str(endEpoch-startEpoch)+"s - Avg Time per Batch: "+str(meanTimePerBatch)+"s")
 
         # Save the results to file
         resArr[i,:] = [i, err, validAccuracy, endEpoch-startEpoch, meanTimePerBatch]
         np.savetxt(outDir + "trainingError_" + modelName + ".csv", resArr, fmt='%10.16f', delimiter=',', newline='\n') # Save the training errors
 
         # Save the model
-        if i%saveModelInterval == 0: myNet.Saver.save(myInterface.sess, outDir + modelName) #myInterface.SaveGraph("trainingResults/" + MODEL_NAME) #
+        if i%saveModelInterval == 0: networkHandle.Saver.save(myInterface.sess, outDir + modelName) #myInterface.SaveGraph("trainingResults/" + MODEL_NAME) #
 
 
 
