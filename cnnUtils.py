@@ -167,7 +167,7 @@ def GenRandomArchitecture(MAX_CONV_LAYERS, FILTER_NUMBERS_ARRAY, FILTER_SIZES_AR
 
 # ========================================================
 # Function to train a given CNN on given fluidigm data
-def TrainAndTestNetwork(networkHandle, dataDir, trainingSet, validSet, testingSet, coreToOutcomeMap, nEpochs, batchSize, dropOutProb=0.5, outDir="trainingResults/",modelName="CNN", verbose=True, saveModelInterval=5):
+def TrainAndTestNetwork(networkHandle, dataDir, trainingSet, validSet, testingSet, coreToOutcomeMap, nEpochs, batchSize, dropOutProb=0.5, outDirLogs = "trainingResults/",outDirModel="trainingResults/",modelName="CNN", verbose=True, saveModelInterval=5):
     # Set up the interface
     if verbose: print("Starting the Interface...")
     myInterface = networkHandle.CreateTFInterface()
@@ -221,10 +221,10 @@ def TrainAndTestNetwork(networkHandle, dataDir, trainingSet, validSet, testingSe
 
         # Save the results to file
         resArr[i,:] = [i, err, validAccuracy, endEpoch-startEpoch, meanTimePerBatch]
-        np.savetxt(outDir + "/trainingError_" + modelName + ".csv", resArr, fmt='%10.16f', delimiter=',', newline='\n') # Save the training errors
+        np.savetxt(outDirLogs + "/trainingError_" + modelName + ".csv", resArr, fmt='%10.16f', delimiter=',', newline='\n') # Save the training errors
 
         # Save the model
-        if i%saveModelInterval == 0: networkHandle.Saver.save(myInterface.sess, outDir+ "/" + modelName) #myInterface.SaveGraph("trainingResults/" + MODEL_NAME) #
+        if i%saveModelInterval == 0: networkHandle.Saver.save(myInterface.sess, outDirModel + "/" + modelName) #myInterface.SaveGraph("trainingResults/" + MODEL_NAME) #
 
 
 
