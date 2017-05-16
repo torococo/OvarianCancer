@@ -52,7 +52,7 @@ testError,testAccuracy = cnnUtils.TrainAndTestNetwork(myNet,DATA_DIR,trainingSet
 performanceArr = np.array([iSet,testError,testAccuracy],dtype=np.float32).reshape((1,3))
 
 # Save the results
-np.savetxt(OUT_DIR+"performance_" + modelName + "_Set_" + str(iSet) + ".csv", performanceArr, fmt='%10.16f', delimiter=',', newline='\n')
+np.savetxt(OUT_DIR+"/performance_" + modelName + "_Set_" + str(iSet) + ".csv", performanceArr, fmt='%10.16f', delimiter=',', newline='\n')
 
 # Clean up
 OUT_DIR = os.path.expanduser('~') + "/fluidigmProject/linearClassifier/" + OUT_DIR
