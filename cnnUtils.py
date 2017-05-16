@@ -221,10 +221,10 @@ def TrainAndTestNetwork(networkHandle, dataDir, trainingSet, validSet, testingSe
 
         # Save the results to file
         resArr[i,:] = [i, err, validAccuracy, endEpoch-startEpoch, meanTimePerBatch]
-        np.savetxt(outDir + "trainingError_" + modelName + ".csv", resArr, fmt='%10.16f', delimiter=',', newline='\n') # Save the training errors
+        np.savetxt(outDir + "/trainingError_" + modelName + ".csv", resArr, fmt='%10.16f', delimiter=',', newline='\n') # Save the training errors
 
         # Save the model
-        if i%saveModelInterval == 0: networkHandle.Saver.save(myInterface.sess, outDir + modelName) #myInterface.SaveGraph("trainingResults/" + MODEL_NAME) #
+        if i%saveModelInterval == 0: networkHandle.Saver.save(myInterface.sess, outDir+ "/" + modelName) #myInterface.SaveGraph("trainingResults/" + MODEL_NAME) #
 
 
 
