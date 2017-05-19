@@ -117,7 +117,7 @@ def GenRandomArchitecture(MAX_CONV_LAYERS, FILTER_NUMBERS_ARRAY, FILTER_SIZES_AR
     sigIdx = 0
 
     # 1. Choose the number of convolutional layers
-    nConvLayers = np.random.randint(0,MAX_CONV_LAYERS)
+    nConvLayers = np.random.randint(1,MAX_CONV_LAYERS)
     signature[sigIdx] = nConvLayers
     sigIdx += 1
 
