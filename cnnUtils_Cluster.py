@@ -5,10 +5,10 @@
 # import tensorflow as tf
 # import DataProc as dtp
 import time
-import Utils
 import numpy as np
 import os
 import re
+import Utils_Cluster
 #import matplotlib.pyplot as plt
 #from matplotlib.backends.backend_pdf import PdfPages # Library to save plots as pdfs
 
@@ -82,32 +82,6 @@ def PartitionData(coreIdxVec,fracs=[0.8,0,0.2],abs=None,bShuffle=False):
     validSet = coreIdxVec[indices[nTraining:(nTraining+nValid)]] #{'Cores': inputArr[indices[nTraining:(nTraining+nValid)],:,:,:], 'Outcomes': inputArr[indices[nTraining:(nTraining+nValid)],:,:]}
     testingSet = coreIdxVec[indices[(nTraining+nValid):]]
     return trainingSet, validSet, testingSet
-
-# ========================================================
-# Function to plot core to pdf
-def plotToPdf(image,fName=None,CoreId=None):
-
-    # Generate filename
-    if fName==None and CoreId != None:
-        fName = "CoreId"+str(CoreId)+".pdf"
-    elif fName==None and CoreId != None:
-        raise Exception("No filename for pdf provided!")
-
-    # Open pdf and figure
-    pp = PdfPages(fName)
-    f=plt.figure(1)
-
-    # Plot and save
-    markerLabels = ['88Sr-SrBCK(Sr88Di)', '101Ru-RR101(Ru101Di)', '102Ru-RR102(Ru102Di)', '115In-AvantiLipid(In115Di)', '134Xe-XeBCK(Xe134Di)', '141Pr-CD196(Pr141Di)', '142Nd-CD19(Nd142Di)', '143Nd-Vimentin(Nd143Di)', '145Nd-CD163(Nd145Di)', '147Sm-CD20(Sm147Di)', '148Nd-CD16(Nd148Di)', '149Sm-CD25(Sm149Di)', '150Nd-p53(Nd150Di)', '151Eu-CD134(Eu151Di)', '152Sm-CD45(Sm152Di)', '153Eu-CD44s(Eu153Di)', '154Gd-CD14(Gd154Di)', '155Gd-FoxP3(Gd155Di)', '156Gd-CD4(Gd156Di)', '158Gd-E-cadherin(Gd158Di)', '159Tb-p21(Tb159Di)', '161Dy-CD152(Dy161Di)', '162Dy-CD8a(Dy162Di)', '164Dy-CD11b(Dy164Di)', '165Ho-Beta-catenin(Ho165Di)', '166Er-B7-H4(Er166Di)', '168Er-Ki67(Er168Di)', '169Tm-CollagenI(Tm169Di)', '170Er-CD3(Er170Di)', '171Yb-CD68(Yb171Di)', '172Yb-PD-L2(Yb172Di)', '173Yb-B7-H3(Yb173Di)', '174Yb-HLA-DR(Yb174Di)', '175Lu-pS6(Lu175Di)', '176Yb-HistoneH3(Yb176Di)', '191Ir-DNA191(Ir191Di)', '193Ir-DNA193(Ir193Di)']
-
-    for stain in range(37):
-        plt.imshow(image[:,:,stain])
-        plt.title("Core: "+str(CoreId)+", Label:"+markerLabels[stain])
-        pp.savefig(f)
-
-    # Close the files and clean up
-    pp.close()
-    plt.close()
 
 # ========================================================
 def GenRandomArchitecture(MAX_CONV_LAYERS, FILTER_NUMBERS_ARRAY, FILTER_SIZES_ARRAY, MAXPOOL_SIZES_ARRAY, MAX_FC_LAYERS, FC_SIZES_ARRAY):
@@ -186,7 +160,7 @@ def TrainAndTestNetwork(networkHandle, dataDir, trainingSet, validSet, testingSe
     for i in range(nEpochs):
 
         # Partition training data into batches
-        batchVec,_ = Utils.GenBatchSet(trainingSet,trainingSet,batchSize)
+        batchVec,_ = Utils_Cluster.GenBatchSet(trainingSet,trainingSet,batchSize)
 
         startEpoch = time.time() # Record time for epoch
 
