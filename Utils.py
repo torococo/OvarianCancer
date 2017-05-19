@@ -450,3 +450,46 @@ class ConvolutionalNetwork:
 
   def CreateTFInterface(self):
     return TFinterface(self.graph,self.OutputLayerTF,self.ErrorTF,self.TrainTF,self.GradsTF,self.AccuracyTF,self.InitVarsTF,self.Saver,'inputsPL','outputsPL','dropoutPL','outMasksPL')
+
+class LinearClassifier:
+  def __init__(self,inputShape,nOutputs,bRegularise=False,regScale=0.1):
+    self.sess=None
+    self.graph=tf.Graph()
+    with self.graph.as_default():
+      inputsTF=tf.placeholder(tf.float32,[None]+inputShape,name='inputsPL')
+      correctOutputsTF=tf.placeholder(tf.float32,[None,nOutputs],name='outputsPL')
+      dropoutProbTF=tf.placeholder(tf.float32,name='dropoutPL')  # Dummy so that the class integrates with the interface
+
+      arr=np.array(inputsTF.get_shape()[1:].as_list())
+      dims=[-1,np.prod(arr)]
+      LastLayerTF=tf.reshape(inputsTF,dims)
+      LastLayerTF = slim.fully_connected(LastLayerTF,nOutputs,activation_fn=None)
+      self.Saver=tf.train.Saver()
+
+      self.OutputLayerTF=tf.nn.softmax(LastLayerTF)
+
+      #error function
+      self.ErrorTF=tf.reduce_mean(tf.nn.softmax_cross_entropy_with_logits(labels=correctOutputsTF,logits=LastLayerTF))
+      if bRegularise:
+        regularizer = tf.contrib.layers.l2_regularizer(scale=regScale)
+        tf.add_to_collection(tf.GraphKeys.REGULARIZATION_LOSSES, tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES))
+        reg_variables = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
+        reg_term = tf.contrib.layers.apply_regularization(regularizer, reg_variables)
+        self.ErrorTF += reg_term
+
+      #
+      self.Correct_prediction = tf.equal(tf.argmax(self.OutputLayerTF,1), tf.argmax(correctOutputsTF,1))
+      self.ClassificationErrorTF = tf.reduce_mean(tf.cast(self.Correct_prediction, tf.float32))
+
+      #training
+      self.TrainTF=tf.train.AdamOptimizer().minimize(self.ErrorTF)
+
+      #getting gradient values
+      outMasksTF=tf.placeholder(tf.float32,[None,nOutputs],name='outMasksPL')
+      self.GradsTF=tf.gradients(self.OutputLayerTF,inputsTF,outMasksTF)
+
+      #variable initialization
+      self.InitVarsTF=tf.global_variables_initializer()
+
+  def CreateTFInterface(self):
+    return TFinterface(self.graph,self.OutputLayerTF,self.ErrorTF,self.TrainTF,self.GradsTF,self.ClassificationErrorTF,self.InitVarsTF,self.Saver,'inputsPL','outputsPL','dropoutPL','outMasksPL')
