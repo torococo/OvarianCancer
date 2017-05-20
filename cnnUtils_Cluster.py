@@ -84,6 +84,7 @@ def PartitionData(coreIdxVec,fracs=[0.8,0,0.2],abs=None,bShuffle=False):
     return trainingSet, validSet, testingSet
 
 # ========================================================
+# Generate a random Architecture
 def GenRandomArchitecture(MAX_CONV_LAYERS, FILTER_NUMBERS_ARRAY, FILTER_SIZES_ARRAY, MAXPOOL_SIZES_ARRAY, MAX_FC_LAYERS, FC_SIZES_ARRAY):
     # Generate a random architecture
     architecture = []
@@ -108,7 +109,7 @@ def GenRandomArchitecture(MAX_CONV_LAYERS, FILTER_NUMBERS_ARRAY, FILTER_SIZES_AR
         sigIdx += 1
 
         # Add it to the network
-        architecture.append(np.array([nFilters,filterSize,1]))
+        architecture.append([nFilters,filterSize,1])
 
         # Potentially add a Maxpool layer
         addMaxpool = bool(np.random.binomial(1,0.5))
@@ -119,7 +120,7 @@ def GenRandomArchitecture(MAX_CONV_LAYERS, FILTER_NUMBERS_ARRAY, FILTER_SIZES_AR
             maxpoolSize = MAXPOOL_SIZES_ARRAY[np.random.randint(0,len(MAXPOOL_SIZES_ARRAY))]
 
             # Add it
-            architecture.append(np.array([maxpoolSize,maxpoolSize]))
+            architecture.append([maxpoolSize,maxpoolSize])
 
         signature[sigIdx] = maxpoolSize
         sigIdx += 1
@@ -135,7 +136,7 @@ def GenRandomArchitecture(MAX_CONV_LAYERS, FILTER_NUMBERS_ARRAY, FILTER_SIZES_AR
         signature[sigIdx] = fcSize
         sigIdx += 1
 
-        architecture.append(np.array([fcSize]))
+        architecture.append([fcSize])
 
     return architecture, signature
 
