@@ -12,9 +12,9 @@ import math
 from matplotlib.backends.backend_pdf import PdfPages # Library to save plots as pdfs
 
 # Control which of the operations the script should carry out
-DO_PICKLE_AND_FIND_DIMENSION = False
+DO_PICKLE_AND_FIND_DIMENSION = True
 DO_ANALYSE_DIMENSIONS = False
-DO_CROP = False
+DO_CROP = True
 DO_TRANSFORM = True
 
 # ========================================================================
@@ -57,7 +57,6 @@ def plotToPdf(image,fName=None,CoreId=None):
     f=plt.figure(1)
 
     # Plot and save
-    markerLabels = ['88Sr-SrBCK(Sr88Di)', '101Ru-RR101(Ru101Di)', '102Ru-RR102(Ru102Di)', '115In-AvantiLipid(In115Di)', '134Xe-XeBCK(Xe134Di)', '141Pr-CD196(Pr141Di)', '142Nd-CD19(Nd142Di)', '143Nd-Vimentin(Nd143Di)', '145Nd-CD163(Nd145Di)', '147Sm-CD20(Sm147Di)', '148Nd-CD16(Nd148Di)', '149Sm-CD25(Sm149Di)', '150Nd-p53(Nd150Di)', '151Eu-CD134(Eu151Di)', '152Sm-CD45(Sm152Di)', '153Eu-CD44s(Eu153Di)', '154Gd-CD14(Gd154Di)', '155Gd-FoxP3(Gd155Di)', '156Gd-CD4(Gd156Di)', '158Gd-E-cadherin(Gd158Di)', '159Tb-p21(Tb159Di)', '161Dy-CD152(Dy161Di)', '162Dy-CD8a(Dy162Di)', '164Dy-CD11b(Dy164Di)', '165Ho-Beta-catenin(Ho165Di)', '166Er-B7-H4(Er166Di)', '168Er-Ki67(Er168Di)', '169Tm-CollagenI(Tm169Di)', '170Er-CD3(Er170Di)', '171Yb-CD68(Yb171Di)', '172Yb-PD-L2(Yb172Di)', '173Yb-B7-H3(Yb173Di)', '174Yb-HLA-DR(Yb174Di)', '175Lu-pS6(Lu175Di)', '176Yb-HistoneH3(Yb176Di)', '191Ir-DNA191(Ir191Di)', '193Ir-DNA193(Ir193Di)']
 
     for stain in range(37):
         plt.imshow(image[:,:,stain])
@@ -71,8 +70,8 @@ def plotToPdf(image,fName=None,CoreId=None):
 # ========================================================================
 # Load the files and pickle them. Find the dimensions of each image
 if DO_PICKLE_AND_FIND_DIMENSION:
-    rawFileNames = dtp.GetFileNames('Data/PatientsWithOutcomes/TxtFiles/') # Get file names
-    outcomeArr  = np.genfromtxt('Data/coreToSensitivityMap.csv', delimiter=',') # Get Array with patient outcomes
+    rawFileNames = dtp.GetFileNames('../data/patientsWithOutcomes/txtFiles/') # Get file names
+    outcomeArr  = np.genfromtxt('../data/patientsWithOutcomes/coreToSensitivityMap_121Cores.csv', delimiter=',') # Get Array with patient outcomes
 
     imgDimArr = np.zeros((len(rawFileNames),4))
     for i,fName in enumerate(rawFileNames):
@@ -101,20 +100,20 @@ if DO_PICKLE_AND_FIND_DIMENSION:
         # out.close()
 
         # Generate a pdf
-        fName = "Data/PatientsWithOutcomes/PdfsOriginals/core_"+str(coreId)+"_Original"+".pdf"
-        plotToPdf(np.log10(image),fName)
+        fName = "../data/patientsWithOutcomes/pdfsOriginals/core_"+str(coreId)+"_Original"+".pdf"
+        plotToPdf(image,fName)
 
         # Save as np array
-        outName = "Data/PatientsWithOutcomes/RawNpArrays/core_"+str(coreId)+".npy"
+        outName = "../data/patientsWithOutcomes/npArraysRaw/core_"+str(coreId)+".npy"
         np.save(outName,image)
 
         # Save the dimensions array
-        np.savetxt("Data/PatientsWithOutcomes/imageDimensions.csv", imgDimArr,fmt='%10.0f', delimiter=',', newline='\n', header='', footer='', comments='# ')
+        np.savetxt("../data/patientsWithOutcomes/imageDimensions.csv", imgDimArr,fmt='%10.0f', delimiter=',', newline='\n', header='', footer='', comments='# ')
 
 # ========================================================================
 # Find the minimum dimensions and check that each image has 37 channels
 if DO_ANALYSE_DIMENSIONS:
-    imgDimArr  = np.genfromtxt('Data/PatientsWithOutcomes/imageDimensions.csv', delimiter=',') # Get Array with patient outcomes
+    imgDimArr  = np.genfromtxt('../data/patientsWithOutcomes/imageDimensions.csv', delimiter=',') # Get Array with patient outcomes
 
     print('========================================================================')
     print('Total Number of images in array: '+str(imgDimArr.shape[0]))
@@ -161,8 +160,8 @@ if DO_CROP:
     CANONICAL_DIMS_X = 600
     CANONICAL_DIMS_Y = 600
     N_STAINS = 37
-    outcomeArr  = np.genfromtxt('data/patientsWithOutcomes/coreToSensitivityMap_122Cores.csv', delimiter=',') # Get Array with patient outcomes
-    rawFileNames = dtp.GetFileNames('data/patientsWithOutcomes/txtFiles/') # Get file names
+    outcomeArr  = np.genfromtxt('../data/patientsWithOutcomes/coreToSensitivityMap_121Cores.csv', delimiter=',') # Get Array with patient outcomes
+    rawFileNames = dtp.GetFileNames('../data/patientsWithOutcomes/txtFiles/') # Get file names
 
     for i,inFName in enumerate(rawFileNames):
 
@@ -173,7 +172,7 @@ if DO_CROP:
         print(str(i+1) +" of "+str(len(rawFileNames))+" - Cropping core "+str(coreId))
 
         # Load the data
-        image = np.load("Data/PatientsWithOutcomes/RawNpArrays_Pickled/core"+str(coreId)+".npy","rb")
+        image = np.load("../data/patientsWithOutcomes/npArraysRaw/core"+str(coreId)+".npy","rb")
 
         # Find its dimensions
         imgDims = image.shape
@@ -222,18 +221,18 @@ if DO_CROP:
         processedImg[insertionPtTmp_y:endPtTmp_y,insertionPtTmp_x:endPtTmp_x,:] = image[insertionPtImg_y:endPtImg_y,insertionPtImg_x:endPtImg_x,:]
 
         # Plot to PDF
-        fName = "Data/PatientsWithOutcomes/PdfsCropped2/core_"+str(coreId)+"_Cropped"+".pdf"
-        plotToPdf(np.log10(processedImg),fName)
+        fName = "../data/patientsWithOutcomes/pdfsCropped/core_"+str(coreId)+"_Cropped"+".pdf"
+        plotToPdf(processedImg,fName)
 
         # Save the numpy array
-        outName = "Data/PatientsWithOutcomes/CroppedNpArrays/core_"+str(coreId)+"_Cropped"+".npy"
+        outName = "../data/patientsWithOutcomes/npArraysCropped/core_"+str(coreId)+"_Cropped"+".npy"
         np.save(outName,processedImg)
 
 # ========================================================================
 # Transform the data
 if DO_TRANSFORM:
-    outcomeArr  = np.genfromtxt('data/patientsWithOutcomes/coreToSensitivityMap_122Cores.csv', delimiter=',') # Get Array with patient outcomes
-    rawFileNames = dtp.GetFileNames('data/patientsWithOutcomes/txtFiles/') # Get file names
+    outcomeArr  = np.genfromtxt('../data/patientsWithOutcomes/coreToSensitivityMap_121Cores.csv', delimiter=',') # Get Array with patient outcomes
+    rawFileNames = dtp.GetFileNames('../data/patientsWithOutcomes/txtFiles/') # Get file names
 
     for i,inFName in enumerate(rawFileNames):
 
@@ -244,17 +243,17 @@ if DO_TRANSFORM:
         print(str(i+1) +" of "+str(len(rawFileNames))+" - Transforming core "+str(coreId))
 
         # Load the data
-        image = np.load("data/patientsWithOutcomes/npArraysCropped/core_"+str(coreId)+"_Cropped.npy")
+        image = np.load("../data/patientsWithOutcomes/npArraysCropped/core_"+str(coreId)+"_Cropped.npy")
 
         # Transform the image
         processedImg = np.log1p(image)
 
         # Plot to PDF
-        fName = "Data/PatientsWithOutcomes/pdfsLogTransformed/core_"+str(coreId)+"_Log"+".pdf"
+        fName = "../data/patientsWithOutcomes/pdfsLogTransformed/core_"+str(coreId)+"_Log"+".pdf"
         plotToPdf(processedImg,fName)
 
         # Save the numpy array
-        outName = "Data/PatientsWithOutcomes/npArraysLogTransformed/core_"+str(coreId)+"_Log"+".npy"
+        outName = "../data/patientsWithOutcomes/npArraysLogTransformed/core_"+str(coreId)+"_Log"+".npy"
         np.save(outName,processedImg)
 
 # ========================================================================
