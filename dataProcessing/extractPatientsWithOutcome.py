@@ -17,6 +17,7 @@ import os
 import shlex
 import pipes
 
+print(os.getcwd())
 # ========================================================================
 # Function to get coreID from file name via regex matching
 def getCoreId(fName):
@@ -37,8 +38,8 @@ def getPatientOutcome(coreId, outcomeArr):
 # ========================================================================
 # Find the files for the patients with outcomes and check that we have all.
 # Report which ones we're missing
-rawFileNames = dtp.GetFileNames('data/originalTxtFiles/') # Get file names
-outcomeArr  = np.genfromtxt('data/patientsWithOutcomes/coreToSensitivityMap.csv', delimiter=',') # Get Array with patient outcomes
+rawFileNames = dtp.GetFileNames('../data/originalTxtFiles/') # Get file names
+outcomeArr  = np.genfromtxt('../data/patientsWithOutcomes/coreToSensitivityMap.csv', delimiter=',') # Get Array with patient outcomes
 
 fetchedCoresVec = []
 coresWithOutcome =0
@@ -60,7 +61,7 @@ for i,fName in enumerate(rawFileNames):
 
     # Rename the file
     print('Moving Core '+str(coreId)+', Original File Name: ' + str(fName))
-    outFName = "data/txtFilesRenamed/core_"+str(coreId)+".txt"
+    outFName = "../data/txtFilesRenamed/core_"+str(coreId)+".txt"
     os.system ("cp %s %s" % (pipes.quote(fName), outFName))
 
 print('========================================================================')
@@ -74,8 +75,8 @@ print('========================================================================'
 
 # ========================================================================
 # Move files from our cohorts to separate directory ('PatientsWithOutcomes') and rename them into a consistent format
-rawFileNames = dtp.GetFileNames('data/originalTxtFiles/') # Get file names
-outcomeArr  = np.genfromtxt('data/patientsWithOutcomes/coreToSensitivityMap.csv', delimiter=',') # Get Array with patient outcomes
+rawFileNames = dtp.GetFileNames('../data/originalTxtFiles/') # Get file names
+outcomeArr  = np.genfromtxt('../data/patientsWithOutcomes/coreToSensitivityMap.csv', delimiter=',') # Get Array with patient outcomes
 
 print('========================================================================')
 print('Move Files...')
@@ -89,7 +90,7 @@ for i,fName in enumerate(rawFileNames):
     # Move and rename the file
     if coreId in outcomeArr[1:,0]:
         print('Moving Core '+str(coreId))
-        outFName = "data/patientsWithOutcomes/txtFiles/core_"+str(coreId)+".txt"
+        outFName = "../data/patientsWithOutcomes/txtFiles/core_"+str(coreId)+".txt"
         os.system ("cp %s %s" % (pipes.quote(fName), outFName))
         shutil.copy(fName, outFName)
 
@@ -97,7 +98,7 @@ print('Done.')
 print('========================================================================')
 
 # Check which cores from our cohort are missing
-movedFileNames = dtp.GetFileNames('data/patientsWithOutcomes/txtFiles/') # Get file names
+movedFileNames = dtp.GetFileNames('../data/patientsWithOutcomes/txtFiles/') # Get file names
 movedCores = []
 
 regex = re.compile(r'\d+') # In all file names the core id is separated by blank spaces
