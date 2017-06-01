@@ -1,0 +1,264 @@
+\documentclass[a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\begin{document}
+% ---- Beginn Analysis -----
+  \begin{center}
+\section*{Analysis of Pixel-Wise Correlations}
+\end{center}
+So far we've only looked at the mean stain levels between different patients. However, this ignores any spatial processes that might play a role. In order to start gaining a first insight into what spatial processes might play a role we'll here analyse the pixel-wise correlation matrices for the cores from different patients. This will for example highlight the presence/absence of specific cell types/meta-phenotypes.
+
+% =======================================================
+\section{A First Look at the Data}
+I compute the correlation matrices using python and save the lower triangular parts of these matrices to file. In order to adjust for the different scales of the stains  I calculate the standardised correlations using the \texttt{np.corrcoef()} function.
+
+Let's load in the results and label the columns with the correlation they measure:
+<<tidy=F,results='markup'>>=
+corrArr = read.csv("pixelcorrelations.csv",header=F)
+dim(corrArr)
+
+# Label the columns
+labelArr = c("CoreId","PtSnty")
+markerLabelsVec = c('SrBCK', 'RR101', 'RR102', 'AvantiLipid', 'XeBCK', 'CD196', 'CD19', 'Vimentin',
+                    'CD163', 'CD20', 'CD16', 'CD25', 'p53', 'CD134', 'CD45', 'CD44s', 'CD14', 'FoxP3',
+                    'CD4', 'E-cadherin', 'p21', 'CD152', 'CD8a', 'CD11b', 'Beta-catenin', 'B7-H4', 'Ki67',
+                    'CollagenI', 'CD3', 'CD68', 'PD-L2', 'B7-H3', 'HLA-DR', 'pS6', 'HistoneH3', 'DNA191',
+                    'DNA193')
+for (i in seq(2,37)) {
+  for (j in seq(i-1)) {
+    labelArr = c(labelArr,paste0(markerLabelsVec[i],":",markerLabelsVec[j]))
+  }
+}
+names(corrArr) = labelArr
+@
+
+Let's plot the correlations for each patient to see if there's an obvious difference between responders and non-responders.
+
+<<Fig_CorrMatrices,tidy=F,results='markup',fig.pos="h", fig.cap="Pixel-wise correlation of the different stains for responders (top-half) and non-responders (bottom-half).">>=
+library(ggplot2)
+library(reshape2)
+corrArr = corrArr[with(corrArr, order(PtSnty)), ]
+corrArr_idxd = data.frame(corrArr,LinId=seq(nrow(corrArr)))
+corrArr_reshaped = melt(corrArr_idxd[,-1],id.vars=c("LinId"))
+ggplot(corrArr_reshaped, aes(variable, LinId)) + 
+  geom_tile(aes(fill = value),colour="white") + 
+  scale_fill_gradient(low="white",high="steelblue") +
+  theme_bw() + 
+  labs(x="",y="Core") + 
+  theme(axis.text.x = element_text(angle=90, hjust=1))
+@
+
+There doesn't seem anything obvious.
+Let's test for statistically significant differences.
+
+
+\section{A Logistic Regression Model}
+Let's use a logistic regression model to find if there are any significant differences in the correlations between responders and non-responders.
+
+<<results='markup',tidy=F>>=
+initModel = glm(PtSnty ~.,family=binomial(link='logit'),
+                control = list(maxit = 100),
+                data=corrArr)
+summary(initModel)
+@
+
+There seems to be a lot of co-linearity which prevents the model from being fitted. Maybe there are too many optima...
+
+Let's try de-correlate the data. Since we can't compute VIFs, let's start by working with the correlation matrix. Remove any variables that are highly correlated with other variables. This stack-exchange post (https://stackoverflow.com/questions/18275639/remove-highly-correlated-variables) suggests a caret function. Let's try it:
+
+<<results='markup',tidy=F>>=
+library(caret)
+covariatesArr = corrArr[,-c(1,2)]
+coMat = cor(covariatesArr)
+hc = findCorrelation(coMat,cutoff=0.7,exact=TRUE) # put any value as a "cutoff" 
+hc = sort(hc)
+corrArr_Reduced = data.frame(corrArr[,c(1,2)],covariatesArr[,-c(hc)])
+dim(corrArr_Reduced)
+@
+
+Let's try fitting a model again.
+<<results='markup',tidy=F>>=
+initModel = glm(PtSnty ~.,family=binomial(link='logit'),
+                control = list(maxit = 100),
+                data=corrArr_Reduced)
+summary(initModel)
+
+# Look at the VIFs
+library(MASS)
+vif(initModel)
+@
+
+Pretty high VIFs, but let's do a stepping search.
+
+<<results='markup'>>=
+source("../Utils_Maxi.R")
+reducedCoLinModelArr200 = AICVIFCoElimination(DecorrelateVariables(initModel,200,verbose=F)
+                                              ,verbose=F)
+reducedCoLinModelArr100 = AICVIFCoElimination(DecorrelateVariables(initModel,100,verbose=F)
+                                              ,verbose=F)
+reducedCoLinModelArr20 = AICVIFCoElimination(DecorrelateVariables(initModel,20,verbose=F)
+                                             ,verbose=F)
+reducedCoLinModelArr10 = AICVIFCoElimination(DecorrelateVariables(initModel,10,verbose=F)
+                                             ,verbose=F)
+@
+
+Say we tolerate a maximum VIF of 25. What are the best AICs we get?
+
+<<results='markup'>>=
+targetVIF = 25
+best200 = reducedCoLinModelArr200[unlist(reducedCoLinModelArr200$maxVIF)<targetVIF,]
+best200 = best200[which.min(unlist(best200$V1)),]
+best100 = reducedCoLinModelArr100[unlist(reducedCoLinModelArr100$maxVIF)<targetVIF,]
+best100 = best100[which.min(unlist(best100$V1)),]
+best20 = reducedCoLinModelArr20[unlist(reducedCoLinModelArr20$maxVIF)<targetVIF,]
+best20 = best20[which.min(unlist(best20$V1)),]
+best10 = reducedCoLinModelArr10[unlist(reducedCoLinModelArr10$maxVIF)<targetVIF,]
+best10 = best10[which.min(unlist(best10$V1)),]
+print(best200[1:4])
+print(best100[1:4])
+print(best20[1:4])
+print(best10[1:4])
+@
+
+Nice, so we get a model with fairly de-correlated variables (maxVIF around \Sexpr{best100[3]}) and pretty decent predictive power (around \Sexpr{best100[2]} accuracy)!
+
+What does the model consist of?
+
+<<Fig_Model100,tidy=F,results='markup',fig.pos="h", fig.cap="Importance of the different stains according to the logistic model with maxVIF 100. Asterisk indicates level of statistical support for non-zero contribution from this stain (T-test: *p$<$0.05,**p$<$0.01).">>=
+best100Model = glm(paste0(best100[,5]),family=binomial(link='logit'),
+                           data=corrArr_Reduced)
+PlotCoefficients(best10Model,yLim=c(-30,30),yPos=22,errBarWidth=.4)
+@
+
+Strange... It's picking up XeBCK which should be background control. 
+
+% =======================================================
+\section{Cleaning up the Data}
+I just spoke to Olya and I now know all the different stains. They are all meaningful to a certain extend, but there is a certain amount of redundancy in them. Let's clean the data up to remove some of that redundancy.
+<<tidy=F,results='markup'>>=
+stainsToOmitVec = c('SrBCK','RR101','XeBCK','DNA193')
+colToOmitVec = c()
+
+# Calculate the index of the columns with correlations with the above stains and 
+# collect them in a vector.
+k = 3
+for (i in seq(2,37)) {
+  for (j in seq(i-1)) {
+    if (any(markerLabelsVec[c(i,j)] %in% stainsToOmitVec)) {
+      colToOmitVec = c(colToOmitVec,k)
+    }
+    k = k + 1
+  }
+}
+
+corrArr_Curated = corrArr[,-colToOmitVec]
+dim(corrArr_Curated) # Should be removing 36*4-4*3/2 = 138, so expect 530
+@
+
+Let's do de-correlation:
+<<results='markup',tidy=F>>=
+covariatesArr = corrArr_Curated[,-c(1,2)]
+coMat = cor(covariatesArr)
+hc = findCorrelation(coMat,cutoff=0.7,exact=TRUE) # put any value as a "cutoff" 
+hc = sort(hc)
+corrArrCurated_Reduced = data.frame(corrArr_Curated[,c(1,2)],covariatesArr[,-c(hc)])
+dim(corrArrCurated_Reduced)
+@
+
+Let's try fitting a model again.
+<<results='markup',tidy=F>>=
+initModel = glm(PtSnty ~.,family=binomial(link='logit'),
+                control = list(maxit = 100),
+                data=corrArrCurated_Reduced[,-1])
+summary(initModel)
+
+# Look at the VIFs
+vif(initModel)
+@
+
+Pretty high VIFs, but let's do a stepping search.
+
+<<results='markup'>>=
+reducedCoLinModelArr200 = AICVIFCoElimination(DecorrelateVariables(initModel,200,verbose=F)
+                                              ,verbose=F)
+reducedCoLinModelArr100 = AICVIFCoElimination(DecorrelateVariables(initModel,100,verbose=F)
+                                              ,verbose=F)
+reducedCoLinModelArr20 = AICVIFCoElimination(DecorrelateVariables(initModel,20,verbose=F)
+                                             ,verbose=F)
+reducedCoLinModelArr10 = AICVIFCoElimination(DecorrelateVariables(initModel,10,verbose=F)
+                                             ,verbose=F)
+@
+
+Say we tolerate a maximum VIF of 25. What are the best AICs we get?
+
+<<results='markup'>>=
+targetVIF = 5
+best200 = reducedCoLinModelArr200[unlist(reducedCoLinModelArr200$maxVIF)<targetVIF,]
+best200 = best200[which.min(unlist(best200$V1)),]
+best100 = reducedCoLinModelArr100[unlist(reducedCoLinModelArr100$maxVIF)<targetVIF,]
+best100 = best100[which.min(unlist(best100$V1)),]
+best20 = reducedCoLinModelArr20[unlist(reducedCoLinModelArr20$maxVIF)<targetVIF,]
+best20 = best20[which.min(unlist(best20$V1)),]
+best10 = reducedCoLinModelArr10[unlist(reducedCoLinModelArr10$maxVIF)<targetVIF,]
+best10 = best10[which.min(unlist(best10$V1)),]
+print(best200[1:4])
+print(best100[1:4])
+print(best20[1:4])
+print(best10[1:4])
+@
+
+Starting from a VIF of 10 seems to be giving the best results. It gives a model with 4 coefficients and \Sexpr{best10[2]} accuracy!
+<<Fig_Model4Coef,tidy=F,results='markup',fig.pos="h", fig.cap="Importance of the different stains according to the logistic model with maxVIF 100. Asterisk indicates level of statistical support for non-zero contribution from this stain (T-test: *p$<$0.05,**p$<$0.01).">>=
+model4Coef = glm(paste0(best10[,5]),family=binomial(link='logit'),
+                           data=corrArrCurated_Reduced)
+PlotCoefficients(model4Coef,yLim=c(-100,100),yPos=22,errBarWidth=.4)
+@
+
+Alternatively there is a model with 13 coefficients:
+<<Fig_Model13Coef,tidy=F,results='markup',fig.pos="h", fig.cap="Importance of the different stains according to the logistic model with maxVIF 100. Asterisk indicates level of statistical support for non-zero contribution from this stain (T-test: *p$<$0.05,**p$<$0.01).">>=
+Model13Coef = glm(paste0(best20[,5]),family=binomial(link='logit'),
+                           data=corrArrCurated_Reduced)
+PlotCoefficients(Model13Coef,yLim=c(-100,100),yPos=22,errBarWidth=.4)
+@
+
+How do the two compare in cross-validation?
+
+<<results='markup'>>=
+nIter = 100
+nFolds = 5
+# Do the cross validation
+best10AccVec = LogisticCrossVal(nIter,nFolds,best10Model$formula,
+                                 corrArrCurated_Reduced)
+mean(best10AccVec)
+
+# Cross-validation
+nIter = 100
+nFolds = 5
+
+modelVec = c(best100Model$formula,best100Model$formula)
+
+# Initiate the 
+# Do the cross validation
+best100AccVec = LogisticCrossVal(nIter,nFolds,best100Model$formula,
+                                 meanStainWide_Tranformed)
+best20AccVec = LogisticCrossVal(nIter,nFolds,best20Model$formula,
+                                meanStainWide_Tranformed)
+best10AccVec = LogisticCrossVal(nIter,nFolds,best10Model$formula,
+                                meanStainWide_Tranformed)
+
+# Plot the results
+xValidResult = data.frame(Accuracy=c(minModAccVec,best100AccVec,
+                                     best20AccVec,best10AccVec),
+                          Model=as.factor(c(rep(0,nIter),rep(1,nIter),
+                                            rep(2,nIter),rep(3,nIter))))
+ggplot(xValidResult,aes(x=Model,y=Accuracy,fill=Model)) +
+  geom_boxplot() +
+  xlab("") +
+  scale_fill_discrete(breaks=seq(0,3),labels=c("Best Model from Before",
+                                               "Best Model from Initial VIF 100",
+                                               "Best Model from Initial VIF 20",
+                                               "Best Model from Initial VIF 10"
+  ))
+
+PlotCoefficients(best100Model,yLim=c(-100,100),yPos=50)
+@
+\end{document}
