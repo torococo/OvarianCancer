@@ -81,7 +81,7 @@ AICVIFCoElimination=function(model,targetVIF=10,classifier=T,verbose=T){
 # Function to do a v-fold cross validations (v different ways of splitting
 # the data into training and testing). This code is adopted from:
 # https://www.stat.berkeley.edu/~s133/Class2a.html
-LogisticCrossVal = function(nIter,v,formula,data){
+LogisticCrossVal = function(nIter,nFolds,formula,data){
   accuracyVec = rep(0,nIter)
   for (i in seq(nIter)) {
     # Split the data into training and testing.
@@ -157,5 +157,32 @@ PlotCoefficients = function(model,confLevel=0.95,yLim=c(-25,25),yPos=20,starSize
   
   # Flip the axes
   p = p + coord_flip()
+  return(p)
+}
+
+# =======================================================
+# Function to perform cross-validation on a set of models and plot the results
+PlotCrossValidation = function(modelVec,data,nIter=100,nFolds=5,labelVec=c()) {
+  # Initiate the environment
+  require(ggplot2)
+  nModels = length(modelVec)
+  xValidResult = data.frame(Accuracy=c(),Model=c())
+  if(length(labelVec)==0) {labelVec = seq(nModels)}
+  
+  # Do the cross validation
+  for (modelIdx in seq_along(modelVec)) {
+    tmpAccVec = LogisticCrossVal(nIter,nFolds,modelVec[modelIdx],
+                                 data)
+    xValidResult = rbind(xValidResult,cbind(tmpAccVec,rep(modelIdx,nIter)))
+  }
+  names(xValidResult) = c("Accuracy","Model")
+  xValidResult$Model = as.factor(xValidResult$Model)
+  
+  # Plot the results
+  p = ggplot(xValidResult,aes(x=Model,y=Accuracy,fill=Model)) +
+    geom_boxplot() +
+    xlab("") +
+    scale_fill_discrete(breaks=seq(1,nModels),labels=labelVec)
+  
   return(p)
 }
