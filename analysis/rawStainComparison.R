@@ -184,7 +184,7 @@ ggplot(meanStain_VarCaptured, aes(seq(1,37),cumvar)) +
   xlab("Principal Component") +
   ggtitle("Variance Captured by Principal Components")
 
-# Look at how much each marker contributes to the differenc components
+# Look at how much each marker contributes to the different components
 for (pCompId in seq(1,dim(meanStain_PCA$rotation)[2])) {
   pComp = meanStain_PCA$rotation[,pCompId]
   # Normalise
@@ -384,6 +384,67 @@ ggplot(linDisc,aes(x=MarkerLabels,y=Contribution,fill=Contribution)) +
   ylim(c(-15,15)) +
   scale_fill_gradient(low="red",high="green4") +
   ggtitle(paste("Composition of Linear Discriminant with Non-Indicative Stains Removed",sep="")) +
+  coord_flip()
+dev.off()
+
+# =============================== Logistic Regression ======================
+pdf(paste(outDir,outName,"_LogisticRegression.pdf",sep=""), onefile = TRUE)
+# Reshape the data into a 'wide' formate so that each row is one image
+stainSummaryArr = read.csv("rawStainSummaries.csv",header=F) # Reload original data to make sure there's no contamination
+names(stainSummaryArr) = c("StainId","MeanStain","TotStain","PtSnty","CoreId")
+
+meanStain_Wide = data.frame()
+for (coreId in unique(stainSummaryArr$CoreId)) {
+  tmp_MeanStain = stainSummaryArr$MeanStain[stainSummaryArr$CoreId==coreId]
+  tmp_PtSnty = unique(stainSummaryArr$PtSnty[stainSummaryArr$CoreId==coreId])
+  meanStain_Wide = rbind(meanStain_Wide,c(coreId, tmp_PtSnty, tmp_MeanStain))
+}
+names(meanStain_Wide) = c("CoreId","PtSnty",markerLabelsVec)
+
+# Standardise the data, using the caret preproces function. Note: preProcess can also do a Box-Cox transform
+require(caret)
+meanStainWide_Tranformed = meanStain_Wide
+preprocessParams = preProcess(meanStain_Wide[,3:dim(meanStain_Wide)[2]],method=c("center", "scale"),verbose=T)
+meanStainWide_Tranformed[,3:dim(meanStain_Wide)[2]] = predict(preprocessParams, meanStain_Wide[,3:dim(meanStain_Wide)[2]])
+
+# Remove the coreId column so that it doesn't influence the analysis
+meanStainWide_Tranformed = cbind(meanStainWide_Tranformed$PtSnty,meanStainWide_Tranformed[,3:ncol(meanStainWide_Tranformed)])
+names(meanStainWide_Tranformed) = c("PtSnty",markerLabelsVec)
+summary(meanStainWide_Tranformed)
+
+# Fit a logistic model to the full set of covariates
+meanStain_LogitModel = glm(PtSnty ~.,family=binomial(link='logit'),data=meanStainWide_Tranformed)
+
+# Analyse the results
+summary(meanStain_LogitModel)
+anova(meanStain_LogitModel, test="Chisq")
+
+# Check for co-linearity
+library(car)
+vif(meanStain_LogitModel)
+plot(meanStainWide_Tranformed)
+
+
+# Plot the coefficients
+confLevel = 0.95
+logitMCoeffs = meanStain_LogitModel$coefficients
+logitMStdErrs = summary(meanStain_LogitModel)$coefficients[,2]
+# Normalise
+normFact = sum(abs(logitMCoeffs))
+logitMCoeffs = logitMCoeffs*100/normFact
+logitMStdErrs = logitMStdErrs*100/normFact
+confIntLogitCoeffs = data.frame(MarkerLabels=markerLabelsVec,MeanCoeff=as.numeric(logitMCoeffs[2:length(logitMCoeffs)]),SE=logitMStdErrs[2:length(logitMStdErrs)],CI=qt(confLevel/2+.5, nrow(meanStainWide_Tranformed))*logitMStdErrs[2:length(logitMStdErrs)])
+# Plot
+ggplot(confIntLogitCoeffs,aes(x=MarkerLabels,y=MeanCoeff,fill=MeanCoeff)) + 
+  geom_bar(position=position_dodge(0.9), stat="identity") +
+  geom_errorbar(aes(ymin=MeanCoeff-CI, ymax=MeanCoeff+CI),
+                width=.8,                    # Width of the error bars
+                position=position_dodge(0.9)) + 
+  theme_bw() +
+  ylab("Relative Contribution to Linear Discriminant (in %)") +
+  xlab("") +
+  scale_fill_gradient(low="red",high="green4") +
+  ggtitle(paste("Coefficients of Logistic Model",sep="")) +
   coord_flip()
 dev.off()
 # ========================== Helper Functions ==============================
