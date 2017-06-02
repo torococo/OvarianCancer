@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.14159265-2.6-1.40.17 (TeX Live 2016) (preloaded format=pdflatex 2016.5.22)  1 JUN 2017 11:23
+This is pdfTeX, Version 3.14159265-2.6-1.40.17 (TeX Live 2016) (preloaded format=pdflatex 2016.5.22)  2 JUN 2017 17:03
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -262,28 +262,224 @@ Package pdftex.def Info: figure/Fig_CorrMatrices-1.pdf used on input line 111.
 
 LaTeX Warning: `h' float specifier changed to `ht'.
 
+Package color Info: Redefining color shadecolor on input line 125.
 [1
 
 {/usr/local/texlive/2016/texmf-var/fonts/map/pdftex/updmap/pdftex.map}]
-[2 <./figure/Fig_CorrMatrices-1.pdf>] (./pixelCorrelationAnalysis.aux) ) 
+Package color Info: Redefining color shadecolor on input line 140.
+
+[2 <./figure/Fig_CorrMatrices-1.pdf>]
+Package color Info: Redefining color shadecolor on input line 162.
+ [3] [4]
+Package color Info: Redefining color shadecolor on input line 333.
+
+Overfull \hbox (24.77794pt too wide) in paragraph at lines 336--336
+[][]\OT1/cmtt/m/n/10 reducedCoLinModelArr200[] []=[] []AICVIFCoElimination[][](
+[][]DecorrelateVariables[][](initModel,[][]200[][],[][]verbose[][]=F)[][] 
+ []
+
+
+Overfull \hbox (24.77794pt too wide) in paragraph at lines 338--338
+[][]\OT1/cmtt/m/n/10 reducedCoLinModelArr100[] []=[] []AICVIFCoElimination[][](
+[][]DecorrelateVariables[][](initModel,[][]100[][],[][]verbose[][]=F)[][] 
+ []
+
+
+Overfull \hbox (14.27803pt too wide) in paragraph at lines 340--340
+[][]\OT1/cmtt/m/n/10 reducedCoLinModelArr20[] []=[] []AICVIFCoElimination[][]([
+][]DecorrelateVariables[][](initModel,[][]20[][],[][]verbose[][]=F)[][] 
+ []
+
+
+Overfull \hbox (14.27803pt too wide) in paragraph at lines 342--342
+[][]\OT1/cmtt/m/n/10 reducedCoLinModelArr10[] []=[] []AICVIFCoElimination[][]([
+][]DecorrelateVariables[][](initModel,[][]10[][],[][]verbose[][]=F)[][] 
+ []
+
+Package color Info: Redefining color shadecolor on input line 351.
+[5]
+Package color Info: Redefining color shadecolor on input line 397.
+
+Overfull \hbox (24.77794pt too wide) in paragraph at lines 405--405
+[]\OT1/cmtt/m/n/10 ## Error in PlotCoefficients(best10Model, yLim = c(-30, 30),
+ yPos = 22, errBarWidth = 0.4):
+ []
+
+Package color Info: Redefining color shadecolor on input line 414.
+[6]
+Package color Info: Redefining color shadecolor on input line 442.
+Package color Info: Redefining color shadecolor on input line 459.
+ [7] [8]
+Package color Info: Redefining color shadecolor on input line 613.
+
+Overfull \hbox (24.77794pt too wide) in paragraph at lines 615--615
+[][]\OT1/cmtt/m/n/10 reducedCoLinModelArr200[] []=[] []AICVIFCoElimination[][](
+[][]DecorrelateVariables[][](initModel,[][]200[][],[][]verbose[][]=F)[][] 
+ []
+
+
+Overfull \hbox (24.77794pt too wide) in paragraph at lines 617--617
+[][]\OT1/cmtt/m/n/10 reducedCoLinModelArr100[] []=[] []AICVIFCoElimination[][](
+[][]DecorrelateVariables[][](initModel,[][]100[][],[][]verbose[][]=F)[][] 
+ []
+
+
+Overfull \hbox (14.27803pt too wide) in paragraph at lines 619--619
+[][]\OT1/cmtt/m/n/10 reducedCoLinModelArr20[] []=[] []AICVIFCoElimination[][]([
+][]DecorrelateVariables[][](initModel,[][]20[][],[][]verbose[][]=F)[][] 
+ []
+
+
+Overfull \hbox (14.27803pt too wide) in paragraph at lines 621--621
+[][]\OT1/cmtt/m/n/10 reducedCoLinModelArr10[] []=[] []AICVIFCoElimination[][]([
+][]DecorrelateVariables[][](initModel,[][]10[][],[][]verbose[][]=F)[][] 
+ []
+
+[9]
+Package color Info: Redefining color shadecolor on input line 685.
+ [10]
+Package color Info: Redefining color shadecolor on input line 728.
+LaTeX Font Info:    Font shape `OMS/cmtt/m/it' in size <10> not available
+(Font)              Font shape `OMS/cmsy/m/n' tried instead on input line 738.
+
+Overfull \hbox (104.76349pt too wide) in paragraph at lines 738--738
+[][]\OT1/cmtt/m/it/10 #                        label = "Immature Dendritic Cell
+s\OMS/cmsy/m/n/10 n\OT1/cmtt/m/it/10 n Memory T-Cells\OMS/cmsy/m/n/10 n\OT1/cmt
+t/m/it/10 n and Collagen", size = tSize)[][] 
+ []
+
+
+Overfull \hbox (42.01398pt too wide) in paragraph at lines 740--740
+[][]\OT1/cmtt/m/it/10 #                        label = "Cancer Stem Cell Marker
+s\OMS/cmsy/m/n/10 n\OT1/cmtt/m/it/10 n and Cell Membrane", size = tSize)[][] 
+ []
+
+
+Overfull \hbox (42.01398pt too wide) in paragraph at lines 747--747
+[][]\OT1/cmtt/m/it/10 #                        label = "Cell Proliferation \OMS
+/cmsy/m/n/10 n\OT1/cmtt/m/it/10 n and Immune Check Point", size = tSize)[][] 
+ []
+
+
+Overfull \hbox (36.76402pt too wide) in paragraph at lines 749--749
+[][]\OT1/cmtt/m/it/10 #                        label = "Cell Nucleus Marker \OM
+S/cmsy/m/n/10 n\OT1/cmtt/m/it/10 n and Motile Phenotype", size = tSize)[][] 
+ []
+
+
+Overfull \hbox (10.76419pt too wide) in paragraph at lines 750--750
+[][]\OT1/cmtt/m/it/10 # p = p + geom_rect(aes(xmin = 0, xmax = "CD44s.AvantiLip
+id", ymin = -115, ymax = -150),[][] 
+ []
+
+<figure/Fig_Model4Coef-1.pdf, id=46, 505.89pt x 505.89pt>
+File: figure/Fig_Model4Coef-1.pdf Graphic file (type pdf)
+
+<use figure/Fig_Model4Coef-1.pdf>
+Package pdftex.def Info: figure/Fig_Model4Coef-1.pdf used on input line 761.
+(pdftex.def)             Requested size: 452.9679pt x 452.97328pt.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <7> on input line 761.
+LaTeX Font Info:    External font `cmex10' loaded for size
+(Font)              <5> on input line 761.
+
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+Package color Info: Redefining color shadecolor on input line 769.
+<figure/Fig_Model13Coef-1.pdf, id=47, 505.89pt x 505.89pt>
+File: figure/Fig_Model13Coef-1.pdf Graphic file (type pdf)
+
+<use figure/Fig_Model13Coef-1.pdf>
+Package pdftex.def Info: figure/Fig_Model13Coef-1.pdf used on input line 776.
+(pdftex.def)             Requested size: 452.9679pt x 452.97328pt.
+
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+Package color Info: Redefining color shadecolor on input line 784.
+
+Overfull \hbox (14.27803pt too wide) in paragraph at lines 790--790
+[][]\OT1/cmtt/m/n/10 PlotCrossValidation[][](modelVec,corrArrCurated_Reduced,[]
+[]nIter[][]=[][]100[][],[][]nFolds[][]=[][]5[][],[][]labelVec[][]=labelVec)[][]
+ 
+ []
+
+[11] <figure/Fig_ModelComp1-1.pdf, id=51, 505.89pt x 505.89pt>
+File: figure/Fig_ModelComp1-1.pdf Graphic file (type pdf)
+
+<use figure/Fig_ModelComp1-1.pdf>
+Package pdftex.def Info: figure/Fig_ModelComp1-1.pdf used on input line 793.
+(pdftex.def)             Requested size: 452.9679pt x 452.97328pt.
+
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+Missing character: There is no â in font cmr10!
+Missing character: There is no € in font cmr10!
+Missing character: There is no ™ in font cmr10!
+Missing character: There is no â in font cmr10!
+Missing character: There is no € in font cmr10!
+Missing character: There is no ™ in font cmr10!
+[12 <./figure/Fig_Model4Coef-1.pdf>]
+Package color Info: Redefining color shadecolor on input line 812.
+
+Overfull \hbox (66.77757pt too wide) in paragraph at lines 814--814
+[][]\OT1/cmtt/m/n/10 only4CoefDataArr[] []=[] []corrArrCurated_Reduced[,[][]c[]
+[]([][]"CoreId"[][],[][]"PtSnty"[][],[][]names[][](model4Coef[][]$[][]coefficie
+nts)[[][]-[][]1[][]])][][] 
+ []
+
+
+Overfull \hbox (129.77702pt too wide) in paragraph at lines 815--815
+[][]\OT1/cmtt/m/n/10 only4CoefDataArr[] []=[] []data.frame[][](only4CoefDataArr
+,[][]Prediction[][]=[][]predict[][](model4Coef,only4CoefDataArr,[][]type[][]=[]
+[]^^Mresponse^^M[][]))[][] 
+ []
+
+
+Overfull \hbox (104.76349pt too wide) in paragraph at lines 816--816
+[][]\OT1/cmtt/m/it/10 # only4CoefDataArr[,2:5] = t(apply(only4CoefDataArr,1,fun
+ction(row)\OMS/cmsy/m/n/10 f\OT1/cmtt/m/it/10 row[-1]*model4Coef$coefficients[-
+1]\OMS/cmsy/m/n/10 g\OT1/cmtt/m/it/10 ))[][] 
+ []
+
+
+Overfull \vbox (0.93307pt too high) detected at line 827
+ []
+
+[13 <./figure/Fig_Model13Coef-1.pdf>]
+<figure/Fig_PatientTess-1.pdf, id=72, 505.89pt x 505.89pt>
+File: figure/Fig_PatientTess-1.pdf Graphic file (type pdf)
+
+<use figure/Fig_PatientTess-1.pdf>
+Package pdftex.def Info: figure/Fig_PatientTess-1.pdf used on input line 828.
+(pdftex.def)             Requested size: 452.9679pt x 452.97328pt.
+
+
+LaTeX Warning: `h' float specifier changed to `ht'.
+
+[14 <./figure/Fig_ModelComp1-1.pdf>] [15 <./figure/Fig_PatientTess-1.pdf>]
+(./pixelCorrelationAnalysis.aux) ) 
 Here is how much of TeX's memory you used:
- 2112 strings out of 493014
- 31197 string characters out of 6133351
- 102303 words of memory out of 5000000
- 5638 multiletter control sequences out of 15000+600000
+ 2140 strings out of 493014
+ 31935 string characters out of 6133351
+ 136330 words of memory out of 5000000
+ 5662 multiletter control sequences out of 15000+600000
  4581 words of font info for 18 fonts, out of 8000000 for 9000
  1141 hyphenation exceptions out of 8191
- 38i,6n,32p,451b,286s stack positions out of 5000i,500n,10000p,200000b,80000s
-</usr/l
-ocal/texlive/2016/texmf-dist/fonts/type1/public/amsfonts/cm/cmbx12.pfb></usr/lo
-cal/texlive/2016/texmf-dist/fonts/type1/public/amsfonts/cm/cmitt10.pfb></usr/lo
-cal/texlive/2016/texmf-dist/fonts/type1/public/amsfonts/cm/cmr10.pfb></usr/loca
-l/texlive/2016/texmf-dist/fonts/type1/public/amsfonts/cm/cmsy10.pfb></usr/local
-/texlive/2016/texmf-dist/fonts/type1/public/amsfonts/cm/cmtt10.pfb>
-Output written on pixelCorrelationAnalysis.pdf (2 pages, 497145 bytes).
+ 38i,6n,32p,575b,286s stack positions out of 5000i,500n,10000p,200000b,80000s
+</usr/local/texlive/2016/texmf-dist/fonts/typ
+e1/public/amsfonts/cm/cmbx12.pfb></usr/local/texlive/2016/texmf-dist/fonts/type
+1/public/amsfonts/cm/cmitt10.pfb></usr/local/texlive/2016/texmf-dist/fonts/type
+1/public/amsfonts/cm/cmmi10.pfb></usr/local/texlive/2016/texmf-dist/fonts/type1
+/public/amsfonts/cm/cmr10.pfb></usr/local/texlive/2016/texmf-dist/fonts/type1/p
+ublic/amsfonts/cm/cmsy10.pfb></usr/local/texlive/2016/texmf-dist/fonts/type1/pu
+blic/amsfonts/cm/cmtt10.pfb>
+Output written on pixelCorrelationAnalysis.pdf (15 pages, 567829 bytes).
 PDF statistics:
- 38 PDF objects out of 1000 (max. 8388607)
- 25 compressed objects within 1 object stream
+ 111 PDF objects out of 1000 (max. 8388607)
+ 73 compressed objects within 1 object stream
  0 named destinations out of 1000 (max. 500000)
- 6 words of extra memory for PDF output out of 10000 (max. 10000000)
+ 26 words of extra memory for PDF output out of 10000 (max. 10000000)
 
