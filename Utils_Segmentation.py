@@ -373,7 +373,7 @@ def label_all_stains_in_txt(cell_mask, img_text_file, dst_dir, file_out_prefix):
 
     img_txt_df.to_csv(''.join([dst_dir, file_out_prefix, '.txt']), sep='\t')
 
-    marker_list = [f for f in list(img_txt_df) if f not in ['Start_push', 'End_push', 'Pushes_duration', 'X', 'Y', 'Z']]
+    marker_list = [f for f in list(img_txt_df) if f not in ['Start_push', 'End_push', 'Pushes_duration', 'X', 'Y', 'Z', 'cell_id']]
     c_pos = img_txt_df['X']
     r_pos = img_txt_df['Y']
     max_r = r_pos.max()
