@@ -10,12 +10,13 @@ import pickle
 import matplotlib.pyplot as plt
 import math
 from matplotlib.backends.backend_pdf import PdfPages # Library to save plots as pdfs
+import os
 
 # Control which of the operations the script should carry out
-DO_PICKLE_AND_FIND_DIMENSION = True
+MAKE_NUMPY_AND_FIND_DIMENSION = True
 DO_ANALYSE_DIMENSIONS = False
-DO_CROP = True
-DO_TRANSFORM = True
+DO_CROP = False
+DO_TRANSFORM = False
 
 # ========================================================================
 # Function to get coreID from file name via regex matching
@@ -46,6 +47,12 @@ def getPatientId(coreId, outcomeArr):
 # Function to plot core to pdf
 def plotToPdf(image,fName=None,CoreId=None):
 
+    markerLabels = ['SrBCK', 'RR101', 'RR102', 'AvantiLipid', 'XeBCK', 'CD196', 'CD19', 'Vimentin',
+                   'CD163', 'CD20', 'CD16', 'CD25', 'p53', 'CD134', 'CD45', 'CD44s', 'CD14', 'FoxP3',
+                   'CD4', 'E.cadherin', 'p21', 'CD152', 'CD8a', 'CD11b', 'Beta.catenin', 'B7.H4', 'Ki67',
+                   'CollagenI', 'CD3', 'CD68', 'PD.L2', 'B7.H3', 'HLA.DR', 'pS6', 'HistoneH3', 'DNA191',
+                   'DNA193']
+
     # Generate filename
     if fName==None and CoreId != None:
         fName = "CoreId"+str(CoreId)+".pdf"
@@ -59,7 +66,10 @@ def plotToPdf(image,fName=None,CoreId=None):
     # Plot and save
 
     for stain in range(37):
-        plt.imshow(image[:,:,stain])
+        if np.isnan(image[0,0,stain]):
+            plt.imshow(np.ones_like(image[:, :, stain])*255)
+        else:
+            plt.imshow(image[:,:,stain])
         plt.title("Core: "+str(CoreId)+", Label:"+markerLabels[stain])
         pp.savefig(f)
 
@@ -69,11 +79,19 @@ def plotToPdf(image,fName=None,CoreId=None):
 
 # ========================================================================
 # Load the files and pickle them. Find the dimensions of each image
-if DO_PICKLE_AND_FIND_DIMENSION:
-    rawFileNames = dtp.GetFileNames('../data/patientsWithOutcomes/txtFiles/') # Get file names
+if MAKE_NUMPY_AND_FIND_DIMENSION:
+    rawFileNames = dtp.GetFileNames('../data/patientsWithOutcomes/txtFiles_reordered/') # Get file names
     outcomeArr  = np.genfromtxt('../data/patientsWithOutcomes/coreToSensitivityMap_121Cores.csv', delimiter=',') # Get Array with patient outcomes
 
     imgDimArr = np.zeros((len(rawFileNames),4))
+
+    # Set up environment
+    if not os.path.exists("../data/patientsWithOutcomes/pdfsOriginals/"):
+        os.mkdir("../data/patientsWithOutcomes/pdfsOriginals/")
+    if not os.path.exists("../data/patientsWithOutcomes/npArraysRaw/"):
+        os.mkdir("../data/patientsWithOutcomes/npArraysRaw/")
+
+
     for i,fName in enumerate(rawFileNames):
 
         # Extract coreID
@@ -101,7 +119,7 @@ if DO_PICKLE_AND_FIND_DIMENSION:
 
         # Generate a pdf
         fName = "../data/patientsWithOutcomes/pdfsOriginals/core_"+str(coreId)+"_Original"+".pdf"
-        plotToPdf(image,fName)
+        plotToPdf(image,fName,coreId)
 
         # Save as np array
         outName = "../data/patientsWithOutcomes/npArraysRaw/core_"+str(coreId)+".npy"
@@ -163,16 +181,17 @@ if DO_CROP:
     outcomeArr  = np.genfromtxt('../data/patientsWithOutcomes/coreToSensitivityMap_121Cores.csv', delimiter=',') # Get Array with patient outcomes
     rawFileNames = dtp.GetFileNames('../data/patientsWithOutcomes/txtFiles/') # Get file names
 
+
     for i,inFName in enumerate(rawFileNames):
 
         # Extract coreID
         coreId = getCoreId(inFName)
-        # coreId = 73 # Provide specific core
+        # coreId = 73 # Provide specific corea
 
         print(str(i+1) +" of "+str(len(rawFileNames))+" - Cropping core "+str(coreId))
 
         # Load the data
-        image = np.load("../data/patientsWithOutcomes/npArraysRaw/core"+str(coreId)+".npy","rb")
+        image = np.load("../data/patientsWithOutcomes/npArraysRaw/core_"+str(coreId)+".npy","r")
 
         # Find its dimensions
         imgDims = image.shape
