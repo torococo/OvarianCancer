@@ -1,0 +1,297 @@
+\documentclass[a4paper]{article}
+\usepackage[margin=1in]{geometry}
+\begin{document}
+% ---- Beginn Analysis -----
+  \begin{center}
+\section*{Analysis of Pixel-Wise Correlations}
+\end{center}
+So far we've only looked at the mean stain levels between different patients. However, this ignores any spatial processes that might play a role. In order to start gaining a first insight into what spatial processes might play a role we'll here analyse the pixel-wise correlation matrices for the cores from different patients. This will for example highlight the presence/absence of specific cell types/meta-phenotypes.
+
+% =======================================================
+\section{A First Look at the Data}
+I compute the correlation matrices using python and save the lower triangular parts of these matrices to file. In order to adjust for the different scales of the stains  I calculate the standardised correlations using the \texttt{np.corrcoef()} function.
+
+Let's load in the results and label the columns with the correlation they measure:
+<<tidy=F,results='markup'>>=
+corrArr = read.csv("pixelcorrelations.csv",header=F)
+dim(corrArr)
+
+# Label the columns
+labelArr = c("CoreId","PtSnty")
+markerLabelsVec = c('SrBCK', 'RR101', 'RR102', 'AvantiLipid', 'XeBCK', 'CD196', 'CD19', 'Vimentin',
+                    'CD163', 'CD20', 'CD16', 'CD25', 'p53', 'CD134', 'CD45', 'CD44s', 'CD14', 'FoxP3',
+                    'CD4', 'E-cadherin', 'p21', 'CD152', 'CD8a', 'CD11b', 'Beta-catenin', 'B7-H4', 'Ki67',
+                    'CollagenI', 'CD3', 'CD68', 'PD-L2', 'B7-H3', 'HLA-DR', 'pS6', 'HistoneH3', 'DNA191',
+                    'DNA193')
+for (i in seq(2,37)) {
+  for (j in seq(i-1)) {
+    labelArr = c(labelArr,paste0(markerLabelsVec[i],".",markerLabelsVec[j]))
+  }
+}
+names(corrArr) = labelArr
+@
+
+Let's plot the correlations for each patient to see if there's an obvious difference between responders and non-responders.
+
+<<Fig_CorrMatrices,tidy=F,results='markup',fig.pos="h", fig.cap="Pixel-wise correlation of the different stains for responders (top-half) and non-responders (bottom-half).">>=
+library(ggplot2)
+library(reshape2)
+corrArr = corrArr[with(corrArr, order(PtSnty)), ]
+corrArr_idxd = data.frame(corrArr,LinId=seq(nrow(corrArr)))
+corrArr_reshaped = melt(corrArr_idxd[,-1],id.vars=c("LinId"))
+ggplot(corrArr_reshaped, aes(variable, LinId)) + 
+  geom_tile(aes(fill = value),colour="white") + 
+  scale_fill_gradient(low="white",high="steelblue") +
+  theme_bw() + 
+  labs(x="",y="Core") + 
+  theme(axis.text.x = element_text(angle=90, hjust=1))
+@
+
+There doesn't seem anything obvious.
+Let's test for statistically significant differences.
+
+
+\section{A Logistic Regression Model}
+Let's use a logistic regression model to find if there are any significant differences in the correlations between responders and non-responders.
+
+<<results='markup',tidy=F>>=
+initModel = glm(PtSnty ~.,family=binomial(link='logit'),
+                data=corrArr)
+@
+
+There seems to be a lot of co-linearity which prevents the model from being fitted. Maybe there are too many optima...
+
+Let's try de-correlate the data. Since we can't compute VIFs, let's start by working with the correlation matrix. Remove any variables that are highly correlated with other variables. This stack-exchange post (https://stackoverflow.com/questions/18275639/remove-highly-correlated-variables) suggests a caret function. Let's try it:
+
+<<results='markup',tidy=F>>=
+library(caret)
+covariatesArr = corrArr[,-c(1,2)]
+coMat = cor(covariatesArr)
+hc = findCorrelation(coMat,cutoff=0.7,exact=TRUE) # put any value as a "cutoff" 
+hc = sort(hc)
+corrArr_Reduced = data.frame(corrArr[,c(1,2)],covariatesArr[,-c(hc)])
+dim(corrArr_Reduced)
+@
+
+Let's try fitting a model again.
+<<results='markup',tidy=F>>=
+initModel = glm(PtSnty ~.,family=binomial(link='logit'),
+                control = list(maxit = 100),
+                data=corrArr_Reduced)
+summary(initModel)
+
+# Look at the VIFs
+library(car)
+vif(initModel)
+@
+
+Pretty high VIFs, but let's do a stepping search.
+
+<<results='markup',warning=FALSE>>=
+source("../Utils_Maxi.R")
+reducedCoLinModelArr200 = AICVIFCoElimination(DecorrelateVariables(initModel,200,verbose=F)
+                                              ,verbose=F)
+reducedCoLinModelArr100 = AICVIFCoElimination(DecorrelateVariables(initModel,100,verbose=F)
+                                              ,verbose=F)
+reducedCoLinModelArr20 = AICVIFCoElimination(DecorrelateVariables(initModel,20,verbose=F)
+                                             ,verbose=F)
+reducedCoLinModelArr10 = AICVIFCoElimination(DecorrelateVariables(initModel,10,verbose=F)
+                                             ,verbose=F)
+@
+
+Say we tolerate a maximum VIF of 25. What are the best AICs we get?
+
+<<results='markup'>>=
+targetVIF = 25
+best200 = reducedCoLinModelArr200[unlist(reducedCoLinModelArr200$maxVIF)<targetVIF,]
+best200 = best200[which.min(unlist(best200$V1)),]
+best100 = reducedCoLinModelArr100[unlist(reducedCoLinModelArr100$maxVIF)<targetVIF,]
+best100 = best100[which.min(unlist(best100$V1)),]
+best20 = reducedCoLinModelArr20[unlist(reducedCoLinModelArr20$maxVIF)<targetVIF,]
+best20 = best20[which.min(unlist(best20$V1)),]
+best10 = reducedCoLinModelArr10[unlist(reducedCoLinModelArr10$maxVIF)<targetVIF,]
+best10 = best10[which.min(unlist(best10$V1)),]
+print(best200[1:4])
+print(best100[1:4])
+print(best20[1:4])
+print(best10[1:4])
+@
+
+Nice, so we get a model with fairly de-correlated variables (maxVIF around xxx) and pretty decent predictive power (around xxx) accuracy)!
+
+What does the model consist of?
+
+<<Fig_Model100,tidy=F,results='markup',fig.pos="h", fig.cap="Importance of the different stains according to the logistic model with maxVIF 100. Asterisk indicates level of statistical support for non-zero contribution from this stain (T-test: *p$<$0.05,**p$<$0.01).">>=
+best100Model = glm(paste0(best100[,5]),family=binomial(link='logit'),
+                           data=corrArr_Reduced)
+PlotCoefficients(best10Model,yLim=c(-30,30),yPos=22,errBarWidth=.4)
+@
+
+Strange... It's picking up XeBCK which should be background control. 
+
+% =======================================================
+\section{Cleaning up the Data}
+I just spoke to Olya and I now know all the different stains. They are all meaningful to a certain extend, but there is a certain amount of redundancy in them. Let's clean the data up to remove some of that redundancy.
+<<tidy=F,results='markup'>>=
+stainsToOmitVec = c('SrBCK','RR101','XeBCK','DNA193')
+colToOmitVec = c()
+
+# Calculate the index of the columns with correlations with the above stains and 
+# collect them in a vector.
+k = 3
+for (i in seq(2,37)) {
+  for (j in seq(i-1)) {
+    if (any(markerLabelsVec[c(i,j)] %in% stainsToOmitVec)) {
+      colToOmitVec = c(colToOmitVec,k)
+    }
+    k = k + 1
+  }
+}
+
+corrArr_Curated = corrArr[,-colToOmitVec]
+dim(corrArr_Curated) # Should be removing 36*4-4*3/2 = 138, so expect 530
+@
+
+Let's do de-correlation:
+<<results='markup',tidy=F>>=
+covariatesArr = corrArr_Curated[,-c(1,2)]
+coMat = cor(covariatesArr)
+hc = findCorrelation(coMat,cutoff=0.7,exact=TRUE) # put any value as a "cutoff" 
+hc = sort(hc)
+corrArrCurated_Reduced = data.frame(corrArr_Curated[,c(1,2)],covariatesArr[,-c(hc)])
+dim(corrArrCurated_Reduced)
+@
+
+Let's try fitting a model again.
+<<results='markup',tidy=F>>=
+initModel = glm(PtSnty ~.,family=binomial(link='logit'),
+                control = list(maxit = 100),
+                data=corrArrCurated_Reduced[,-1])
+summary(initModel)
+
+# Look at the VIFs
+vif(initModel)
+@
+
+Pretty high VIFs, but let's do a stepping search.
+
+<<results='markup',warning=FALSE>>=
+reducedCoLinModelArr200 = AICVIFCoElimination(DecorrelateVariables(initModel,200,verbose=F)
+                                              ,verbose=F)
+reducedCoLinModelArr100 = AICVIFCoElimination(DecorrelateVariables(initModel,100,verbose=F)
+                                              ,verbose=F)
+reducedCoLinModelArr20 = AICVIFCoElimination(DecorrelateVariables(initModel,20,verbose=F)
+                                             ,verbose=F)
+reducedCoLinModelArr10 = AICVIFCoElimination(DecorrelateVariables(initModel,10,verbose=F)
+                                             ,verbose=F)
+# Print out the results
+reducedCoLinModelArr200[,1:4]
+reducedCoLinModelArr100[,1:4]
+reducedCoLinModelArr20[,1:4]
+reducedCoLinModelArr10[,1:4]
+@
+
+Say we tolerate a maximum VIF of 25. What are the best AICs we get?
+
+<<results='markup'>>=
+targetVIF = 5
+best200 = reducedCoLinModelArr200[unlist(reducedCoLinModelArr200$maxVIF)<targetVIF,]
+best200 = best200[which.min(unlist(best200$V1)),]
+best100 = reducedCoLinModelArr100[unlist(reducedCoLinModelArr100$maxVIF)<targetVIF,]
+best100 = best100[which.min(unlist(best100$V1)),]
+best20 = reducedCoLinModelArr20[unlist(reducedCoLinModelArr20$maxVIF)<targetVIF,]
+best20 = best20[which.min(unlist(best20$V1)),]
+best10 = reducedCoLinModelArr10[unlist(reducedCoLinModelArr10$maxVIF)<targetVIF,]
+best10 = best10[which.min(unlist(best10$V1)),]
+print(best200[1:4])
+print(best100[1:4])
+print(best20[1:4])
+print(best10[1:4])
+@
+
+Starting from a VIF of 10 seems to be giving the best results. It gives a model with 4 coefficients and 72\% accuracy!
+<<Fig_Model4Coef,tidy=F,results='markup',fig.pos="h", fig.cap="Importance of the different stains according to the logistic model with maxVIF 100. Asterisk indicates level of statistical support for non-zero contribution from this stain (T-test: *p$<$0.05,**p$<$0.01).">>=
+model4Coef = glm(paste0(best10[,5]),family=binomial(link='logit'),
+                           data=corrArrCurated_Reduced)
+p = PlotCoefficients(model4Coef,yLim=c(-100,100),yPos=110,errBarWidth=.4)
+# Annotate the markers
+# yPos = 132.5
+# tSize = 2.5
+# # Positive
+# p = p + annotate("text", x = "CollagenI.CD163", y = yPos,
+#                        label = "Immature Dendritic Cells\n Memory T-Cells\n and Collagen", size = tSize)
+# p = p + annotate("text", x = "CD44s.AvantiLipid", y = yPos,
+#                        label = "Cancer Stem Cell Markers\n and Cell Membrane", size = tSize)
+# p = p + geom_rect(aes(xmin = "Ki67.B7.H4", xmax = 4.5, ymin = 115, ymax = 150),
+#                fill = "transparent", color = "green4", size = 1.5)
+# 
+# # Negative
+# yPos = -132.5
+# p = p + annotate("text", x = "Ki67.B7.H4", y = yPos,
+#                        label = "Cell Proliferation \n and Immune Check Point", size = tSize)
+# p = p + annotate("text", x = "HistoneH3.Vimentin", y = yPos,
+#                        label = "Cell Nucleus Marker \n and Motile Phenotype", size = tSize)
+# p = p + geom_rect(aes(xmin = 0, xmax = "CD44s.AvantiLipid", ymin = -115, ymax = -150),
+#                fill = "transparent", color = "red", size = 1.5)
+p
+@
+
+Alternatively there is a model with 13 coefficients:
+<<Fig_Model13Coef,tidy=F,results='markup',fig.pos="h", fig.cap="Importance of the different stains according to the logistic model with maxVIF 100. Asterisk indicates level of statistical support for non-zero contribution from this stain (T-test: *p$<$0.05,**p$<$0.01).">>=
+model13Coef = glm(paste0(best20[,5]),family=binomial(link='logit'),
+                           data=corrArrCurated_Reduced)
+PlotCoefficients(model13Coef,yLim=c(-100,100),yPos=22,errBarWidth=.4)
+@
+
+How do the two compare in cross-validation?
+<<Fig_ModelComp1,tidy=F,results='markup',fig.pos="h", fig.cap="Comparison of the model with 4 and the model with 13 coefficients in cross-validation (5-fold, 100 iterations). Intriguingly the 4 Coefficient model does significantly better!">>=
+# Cross-validation
+modelVec = c(model4Coef$formula,model13Coef$formula)
+labelVec = c("4 Coefficient Model",
+             "13 Coefficient Model")
+PlotCrossValidation(modelVec,corrArrCurated_Reduced,nIter=100,nFolds=5,labelVec=labelVec)
+@
+
+Interesting. The model with only 4 variables does much better than the one with 13. That's a bit strange. Maybe I should check the ROC curves? Anyhow, for now the results suggest that maybe macrophage infiltration and CD44s expression are positively related to response and B7H4 and Vimentin are negatively related. 
+
+CD163 is a macrophage marker, so a strong collagen-cd163 correlation might indicate macrophage infiltration? 
+CD44s is a membrane protein involved in  cell-cell interactions. Thus, its correlation with AvantiLipid, which marks cell membranes is not too surprising. However, the fact that it is correlated with good outcome is something that the mean level model gives as well, and has been found in other studies as well. I see this as a little bit of a confirmation that we’re not just picking up noise. It shows that we’re picking up a correlation between two stains that we would expect to correlate and a result that is biologically valid as well.
+B7H4 is a checkpoint inhibitor. Its interaction with Ki67 perhaps means that these cells are using this inhibitor for immune evasion?
+Histones and vimentin perhaps hints at very aggressive tumour cells? Vimentin is part of the cytoskeleton and involved in actively moving cells.
+
+
+In principle this could be interesting, however, it is not clear from this whether it's just because it likes the CD163 levels in general, or whether it is really about CD163 and Collagen being in the same place.
+
+To if this is the case, let's first plot out the correlation for the patients to see if it really does separate them now and then colour in the images for those patients where the signal is strongest.
+
+<<Fig_PatientTess,tidy=F,results='markup',fig.pos="h", fig.cap="">>=
+only4CoefDataArr = corrArrCurated_Reduced[,c("CoreId","PtSnty",names(model4Coef$coefficients)[-1])]
+only4CoefDataArr = data.frame(only4CoefDataArr,Prediction=predict(model4Coef,only4CoefDataArr,type='response'))
+# only4CoefDataArr[,2:5] = t(apply(only4CoefDataArr,1,function(row){row[-1]*model4Coef$coefficients[-1]}))
+only4CoefDataArr = only4CoefDataArr[with(only4CoefDataArr, order(PtSnty)), ]
+only4CoefDataArr_idxd = data.frame(only4CoefDataArr,LinId=seq(nrow(only4CoefDataArr)))
+only4CoefDataArr_reshaped = melt(only4CoefDataArr_idxd[,-1],id.vars=c("LinId"))
+ggplot(only4CoefDataArr_reshaped, aes(variable, LinId)) + 
+  geom_tile(aes(fill = value),colour="white") + 
+  scale_fill_gradient(low="red",high="blue") +
+  theme_bw() + 
+  labs(x="",y="Core") + 
+  theme(axis.text.x = element_text(angle=90, hjust=1))
+
+# predictions = ifelse(predictions > 0.5,1,0)
+# predictions==corrArrCurated_Reduced$PtSnty
+# 
+# mean((predictions==0)[corrArrCurated_Reduced$PtSnty==0])
+
+only4CoefDataArr[which.min(only4CoefDataArr$Prediction),]
+only4CoefDataArr[which.max(only4CoefDataArr$Prediction),]
+write.csv(file="correlationModelScores.csv",x=only4CoefDataArr,row.names = FALSE)
+
+only4CoefDataArr = only4CoefDataArr[with(only4CoefDataArr, order(Prediction)), ]
+
+@
+
+What else might be helpful is to look at the images for patients with elevated correlations to see what they correspond to. Let's find a patient who has particularly high 
+
+
+\end{document}
