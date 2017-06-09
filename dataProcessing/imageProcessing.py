@@ -13,10 +13,10 @@ from matplotlib.backends.backend_pdf import PdfPages # Library to save plots as 
 import os
 
 # Control which of the operations the script should carry out
-MAKE_NUMPY_AND_FIND_DIMENSION = True
+MAKE_NUMPY_AND_FIND_DIMENSION = False
 DO_ANALYSE_DIMENSIONS = False
 DO_CROP = False
-DO_TRANSFORM = False
+DO_TRANSFORM = True
 
 # ========================================================================
 # Function to get coreID from file name via regex matching
@@ -251,7 +251,7 @@ if DO_CROP:
 # Transform the data
 if DO_TRANSFORM:
     outcomeArr  = np.genfromtxt('../data/patientsWithOutcomes/coreToSensitivityMap_121Cores.csv', delimiter=',') # Get Array with patient outcomes
-    rawFileNames = dtp.GetFileNames('../data/patientsWithOutcomes/txtFiles/') # Get file names
+    rawFileNames = dtp.GetFileNames('../data/patientsWithOutcomes/txtFiles_reordered/') # Get file names
 
     for i,inFName in enumerate(rawFileNames):
 
@@ -262,7 +262,7 @@ if DO_TRANSFORM:
         print(str(i+1) +" of "+str(len(rawFileNames))+" - Transforming core "+str(coreId))
 
         # Load the data
-        image = np.load("../data/patientsWithOutcomes/npArraysCropped/core_"+str(coreId)+"_Cropped.npy")
+        image = np.load("../data/patientsWithOutcomes/npArraysRaw/core_"+str(coreId)+".npy")
 
         # Transform the image
         processedImg = np.log1p(image)
