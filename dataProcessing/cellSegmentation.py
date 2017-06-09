@@ -19,7 +19,7 @@ nuclear_detection_method = 'watershed'  # 'watershed'  # or  watershed or spectr
 watershed_method = 'edges'  # 'edges'  # edges or gradient
 spectral_clustering_label_assignment = 'discretize'  # discretize or kmeans
 fileDir = "../data/patientsWithOutcomes/npArraysRaw"
-dst_dir = './segmented_images/'
+dst_dir = './segmented_images_max/'
 # ============================= Main Code ================================
 coreVec = cnnUtils.GetAllCoreIds(fileDir)
 
@@ -30,7 +30,7 @@ if not os.path.exists(dst_dir + "segmentations"):
     os.mkdir(dst_dir + "segmentations_coloured")
 
 for coreId in coreVec:
-    img_txt_file = '../data/patientsWithOutcomes/txtFiles/core_'+str(coreId)+".txt"
+    img_txt_file = '../data/patientsWithOutcomes/txtFiles_reordered/core_'+str(coreId)+".txt"
     file_prefix_for_new_txt_file = "core_"+str(coreId)+'_labeled'
 
     print("================================================")
@@ -40,7 +40,7 @@ for coreId in coreVec:
     print('Opening and cleaning image')
     image = np.load(fileDir+"/core_"+str(coreId) + ".npy", "r")
     histoneSlice = image[:,:,34] # Extract the histone layer
-    histoneSlice = cSeg.clean_image(np.copy(histoneSlice),(10, 10),100,method="mean")
+    histoneSlice = cSeg.clean_image(np.copy(histoneSlice),(10, 10),100,method="max")
     histoneSlice  = exposure.rescale_intensity(histoneSlice ) # Normalise
 
     # Create initial mask by local thresholding thresholding
