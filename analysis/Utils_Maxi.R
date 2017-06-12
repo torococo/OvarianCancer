@@ -39,7 +39,7 @@ LmAccuracy = function(model,classifier=F) {
 
 # =======================================================
 # Function to do alternating AIC reduction via step() and VIF reduction
-#(de-correlation) by dropping the variable with the highest VIF.
+# (de-correlation) by dropping the variable with the highest VIF.
 AICVIFCoElimination=function(model,targetVIF=10,classifier=T,verbose=T){
   output=data.frame(aic=c(),accuracy=c(),maxVIF=c(),remainingVar=c(),model=c())
   vifVec = vif(model)
@@ -81,9 +81,9 @@ AICVIFCoElimination=function(model,targetVIF=10,classifier=T,verbose=T){
 # Function to do a v-fold cross validations (v different ways of splitting
 # the data into training and testing). This code is adopted from:
 # https://www.stat.berkeley.edu/~s133/Class2a.html
-LogisticCrossVal = function(nIter,nFolds,formula,data){
-  accuracyVec = rep(0,nIter)
-  for (i in seq(nIter)) {
+LogisticCrossVal = function(nIter,nFolds,formula,data,coinTossModel=F,always1Model=F){
+  accuracyVec = c()
+  for (iterId in seq(nIter)) {
     # Split the data into training and testing.
     # It will assign each core into one of nFold groups. When it's this folds turn
     # the cores in this fold will be the testing set.
@@ -91,15 +91,31 @@ LogisticCrossVal = function(nIter,nFolds,formula,data){
     grps = cut(1:nSamples,nFolds,labels=FALSE)[sample(1:nSamples)]
     
     # Do the validation
-    pred = lapply(1:nFolds,function(i,formula,data){
-      omit = which(grps == i)
-      z = glm(formula,family=binomial(link='logit'),data=data[-omit,])
-      predictions = predict(z,data[omit,],type='response')
-      predictions = ifelse(predictions > 0.5,1,0)
-      ClasificError = 1-mean(predictions != data[omit,]$PtSnty)
-    },formula,data)
+    if (coinTossModel) { # Coin Toss Model (choose either outcome with probability 0.5)
+      pred = lapply(1:nFolds,function(i,formula,data){
+        omit = which(grps == i)
+        predictions = rbinom(nrow(data[omit,]),1,0.5)
+        ClasificError = 1-mean(predictions != data[omit,]$PtSnty)
+        ClasificError = mean(predictions == data[omit,]$PtSnty)
+      },formula,data)
+    } else if (always1Model) { # Model which always predicts 1
+      pred = lapply(1:nFolds,function(i,formula,data){
+        omit = which(grps == i)
+        predictions = rep(1,nrow(data[omit,]))
+        ClasificError = 1-mean(predictions != data[omit,]$PtSnty)
+        ClasificError = mean(predictions == data[omit,]$PtSnty)
+      },formula,data)
+    } else {
+      pred = lapply(1:nFolds,function(i,formula,data){
+        omit = which(grps == i)
+        z = glm(formula,family=binomial(link='logit'),data=data[-omit,])
+        predictions = predict(z,data[omit,],type='response')
+        predictions = ifelse(predictions > 0.5,1,0)
+        ClasificError = 1-mean(predictions != data[omit,]$PtSnty)
+      },formula,data)
+    }
     
-    accuracyVec[i] = mean(unlist(pred))
+    accuracyVec = c(accuracyVec,unlist(pred))
   }
   
   return(accuracyVec)

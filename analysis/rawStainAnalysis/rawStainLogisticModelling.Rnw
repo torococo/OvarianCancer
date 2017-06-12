@@ -1119,38 +1119,209 @@ p
 @
 
 % =======================================================
-\section{More Detailed Performance Assessment}
+\section{A predictive vs explanatory approach}
+From the analysis so far it seems like it will be difficult to find a model that is both very predictive but also not too highly co-linear. I believe this might be because some stains are useful for some cores but not for others. For example, one Macrophage stain might have worked on 100 cores but not on the remaining 21 and similarly for a different macrophage stain. Then for most of the patients the two contain the same information, except for the few where one is more helpful than the other. The predictive model would then keep both, whereas an explanatory model would drop one of them. Let's try this approach here.
+
+We will proceed as follows: We de-correlate the data up to a certain VIF (100,20,10) and then do the AIC, VIF co-optimisation. Subsequently we pick the model with the best AIC below a certain VIF. For the predictive model we set this threshold at 20. For the explanatory model we set it at 5.
+
+% -----------------------------------------------------
+\subsection{De-correlation and Step Search}
+Let's begin with de-correlation and step search. Since people seem to be using VIFs quite heavily I will assume that they work. The correlation matrix based approach seemed not to change very much. Maybe can do that more systematically again and put it in the appendix, but VIF based reduction seems the way to go for now.
 
 <<results='markup'>>=
-# Function to do a v-fold cross validations (v different ways of splitting
-# the data into training and testing). This code is adopted from:
-# https://www.stat.berkeley.edu/~s133/Class2a.html
+omit = c(1,which(names(meanStainCorrected_Tranformed)=="Ki67"))
+initModel = glm(PtSnty ~.,family=binomial(link='logit'),
+                           data=meanStainCorrected_Tranformed[,-omit])
+reducedCoLinModelArr100 = AICVIFCoElimination(DecorrelateVariables(initModel,100,verbose=F)
+                                              ,verbose=F)
+reducedCoLinModelArr20 = AICVIFCoElimination(DecorrelateVariables(initModel,20,verbose=F)
+                                             ,verbose=F)
+reducedCoLinModelArr10 = AICVIFCoElimination(DecorrelateVariables(initModel,10,verbose=F)
+                                             ,verbose=F)
+@
 
-accuracyVec = rep(0,nIter)
-formula = best10Model$formula
+% -----------------------------------------------------
+\subsection{The Predictive Model}
+Let's find the predictive model, where we allow a max VIF of 20.
+<<results='markup'>>=
+targetVIF = 20
+best100 = reducedCoLinModelArr100[unlist(reducedCoLinModelArr100$maxVIF)<targetVIF,]
+best100 = best100[which.min(unlist(best100$V1)),]
+best20 = reducedCoLinModelArr20[unlist(reducedCoLinModelArr20$maxVIF)<targetVIF,]
+best20 = best20[which.min(unlist(best20$V1)),]
+best10 = reducedCoLinModelArr10[unlist(reducedCoLinModelArr10$maxVIF)<targetVIF,]
+best10 = best10[which.min(unlist(best10$V1)),]
+print(best100[1:4])
+print(best20[1:4])
+print(best10[1:4])
+@
+
+How do they do in cross-validation?
+
+<<Fig_PredModelComp,tidy=F,results='markup',fig.pos="h", fig.cap="Cross-validation results for the three different predictive models. The two models with 14 variables do best.">>=
+# Cross-validation
+source("../Utils_Maxi.R")
+modelVec = c(paste0(best100[,5]),paste0(best20[,5]),paste0(best10[,5]))
+labelVec = c("7 Variables, VIF: 10.1, AIC: 146.7",
+             "14 Variables, VIF: 20, AIC: 141.7",
+             "14 Variables, VIF: 9.2, AIC: 141.7")
+PlotCrossValidation(modelVec,meanStainCorrected_Tranformed[,-omit],nIter=100,nFolds=5,labelVec=labelVec)
+@
+
+The two with 14 variables do better than the one with 7 variables, but both do roughly equally well (around 71\%). Interestingly the overall performance is much lower than what was achieved with the ``messed-up'' data. Maybe this is because of the B7H4 signal that both are picking up now.
+
+Given that both Model20 and Model10 seem equally predictive I will choose Model10 as it has the lower VIF.
+
+<<Fig_PredModCoef,tidy=F,results='markup',fig.pos="h", fig.cap="Coefficients of the model with maximised predictive power. Asterisk indicates level of statistical support for non-zero contribution from this stain (T-test: *p$<$0.05,**p$<$0.01).">>=
+predictiveModel = glm(paste0(best10[,5]),family=binomial(link='logit'),
+                           data=meanStainCorrected_Tranformed[,-omit])
+
+p = PlotCoefficients(predictiveModel,yLim=c(-50,50),yPos=22,errBarWidth=.4)
+# Annotate the markers
+yPos = 37
+tSize = 2.5
+# Positive
+p = p + annotate("text", x = "CD196", y = yPos,
+                       label = "Immature\n Dendritic Cells\n Memory T-Cells", size = tSize)
+p = p + annotate("text", x = "E.cadherin", y = yPos,
+                       label = "Epithelial Phenotype", size = tSize)
+p = p + annotate("text", x = "HistoneH3", y = yPos,
+                       label = "Generic Cell Marker", size = tSize)
+p = p + annotate("text", x = "CollagenI", y = yPos,
+                       label = "ECM", size = tSize)
+p = p + annotate("text", x = "CD44s", y = yPos,
+                       label = "Cell-Cell Interaction", size = tSize)
+p = p + annotate("text", x = "B7.H4", y = yPos,
+                       label = "Immune Checkpoint \n on Antigen \n Presenting Cells", size = tSize)
+p = p + annotate("text", x = "p21", y = yPos,
+                       label = "Cell Cycle Inhibitor", size = tSize)
+p = p + annotate("text", x = "DNA191", y = yPos,
+                       label = "DNA", size = tSize)
+p = p + geom_rect(aes(xmin = "pS6", xmax = 14.5, ymin = 25, ymax = 50),
+               fill = "transparent", color = "green4", size = 1.5)
+
+# Negative
+yPos = -37
+p = p + annotate("text", x = "pS6", y = yPos,
+                       label = "Increased \n Translation", size = tSize)
+p = p + annotate("text", x = "Vimentin", y = yPos,
+                       label = "Mesenchymal \n Phenotype", size = tSize)
+p = p + annotate("text", x = "CD25", y = yPos,
+                       label = "Activated T- \n and B-Cells", size = tSize)
+p = p + annotate("text", x = "CD16", y = yPos,
+                       label = "Monocytes/\n Macrophages/\n NK Cells", size = tSize)
+p = p + annotate("text", x = "CD134", y = yPos,
+                       label = "T-Cell Activation\n Survival", size = tSize)
+p = p + annotate("text", x = "CD152", y = yPos,
+                       label = "Checkpoint \n Inhibitor", size = tSize)
+p = p + geom_rect(aes(xmin = 0, xmax = "DNA191", ymin = -25, ymax = -50),
+               fill = "transparent", color = "red", size = 1.5)
+
+p
+@
+
+% -----------------------------------------------------
+\subsection{The Explanatory Model}
+Let's find the explanatory model, where we allow a max VIF of 5.
+<<results='markup'>>=
+targetVIF = 5
+best100 = reducedCoLinModelArr100[unlist(reducedCoLinModelArr100$maxVIF)<targetVIF,]
+best100 = best100[which.min(unlist(best100$V1)),]
+best20 = reducedCoLinModelArr20[unlist(reducedCoLinModelArr20$maxVIF)<targetVIF,]
+best20 = best20[which.min(unlist(best20$V1)),]
+best10 = reducedCoLinModelArr10[unlist(reducedCoLinModelArr10$maxVIF)<targetVIF,]
+best10 = best10[which.min(unlist(best10$V1)),]
+print(best100[1:4])
+print(best20[1:4])
+print(best10[1:4])
+@
+
+How do they do in cross-validation?
+
+<<Fig_ExpModelComp,tidy=F,results='markup',fig.pos="h", fig.cap="Cross-validation results for the three different explanatory models. The two models with 14 variables do best.">>=
+# Cross-validation
+modelVec = c(paste0(best100[,5]),paste0(best20[,5]),paste0(best10[,5]))
+labelVec = c("6 Variables, VIF: 3.8, AIC: 149.8",
+             "10 Variables, VIF: 4.7, AIC: 147.47",
+             "10 Variables, VIF: 4.7, AIC: 147.47")
+PlotCrossValidation(modelVec,meanStainCorrected_Tranformed[,-omit],nIter=100,nFolds=5,labelVec=labelVec)
+@
+
+The two with 10 variables do better than the one with 6 variables, but both do roughly equally well (around 69\%). AIC would dictate Model20 or Model10 here
+
+<<Fig_ExplModCoef,tidy=F,results='markup',fig.pos="h", fig.cap="Coefficients of the model with VIF<5 and best predictive power (The ``explanatory model''). Asterisk indicates level of statistical support for non-zero contribution from this stain (T-test: *p$<$0.05,**p$<$0.01).">>=
+explanatoryModel = glm(paste0(best10[,5]),family=binomial(link='logit'),
+                           data=meanStainCorrected_Tranformed[,-omit])
+
+p = PlotCoefficients(explanatoryModel,yLim=c(-50,50),yPos=22,errBarWidth=.4)
+# Annotate the markers
+yPos = 37
+tSize = 2.5
+# Positive
+p = p + annotate("text", x = "E.cadherin", y = yPos,
+                       label = "Epithelial \n Phenotype", size = tSize)
+p = p + annotate("text", x = "HistoneH3", y = yPos,
+                       label = "Generic \n Cell Marker", size = tSize)
+p = p + annotate("text", x = "CD44s", y = yPos,
+                       label = "Cell-Cell \n Interaction", size = tSize)
+p = p + annotate("text", x = "CollagenI", y = yPos,
+                       label = "ECM", size = tSize)
+p = p + annotate("text", x = "B7.H4", y = yPos,
+                       label = "Immune Checkpoint \n on Antigen \n Presenting Cells", size = tSize)
+p = p + annotate("text", x = "DNA191", y = yPos,
+                       label = "DNA", size = tSize)
+p = p + geom_rect(aes(xmin = "Vimentin", xmax = 10.5, ymin = 25, ymax = 50),
+               fill = "transparent", color = "green4", size = 1.5)
+
+# Negative
+yPos = -37
+p = p + annotate("text", x = "Vimentin", y = yPos,
+                       label = "Mesenchymal \n Phenotype", size = tSize)
+p = p + annotate("text", x = "CD134", y = yPos,
+                       label = "T-Cell Activation\n Survival", size = tSize)
+p = p + annotate("text", x = "CD16", y = yPos,
+                       label = "Monocytes/\n Macrophages/\n NK Cells", size = tSize)
+p = p + annotate("text", x = "CD152", y = yPos,
+                       label = "Checkpoint \n Inhibitor", size = tSize)
+p = p + geom_rect(aes(xmin = 0, xmax = "DNA191", ymin = -25, ymax = -50),
+               fill = "transparent", color = "red", size = 1.5)
+
+p
+@
+
+% -----------------------------------------------------
+\subsection{More Detailed Performance Assessment}
+During cross-validation I'm currently only comparing the models against each other. However, it is somewhat difficult from this to tell how well we're really doing. Are we really better than a coin-toss? And if so, by how much? I know that deviance and R2 should tell me information in this direction, but I can't quite interpret them yet and they seem to have their own restrictions. So, I think it will be insightful to actually run such models on our data and directly compare them to the models I've come up with. Let's do this here.
+
+<<Fig_PredvsExpvsCTvsAll1,tidy=F,results='markup',fig.pos="h", fig.cap="Cross-validation performance of the predictive and the explanatory model compared to two benchmarks. The first benchmark is a coin toss (Choosing either outcome at random). The second benchmark is a model which always chooses 1. This shows both our models do better than the benchmarks. Asterisk indicates level of statistical support for non-zero contribution from this stain (T-test: *p$<$0.05,**p$<$0.01).">>=
+nIter = 100
 nFolds = 5
-data = meanStain_Reduced[,-omit]
-# Split the data into training and testing.
-# It will assign each core into one of nFold groups. When it's this folds turn
-# the cores in this fold will be the testing set.
-nSamples = nrow(data)
-grps = cut(1:nSamples,nFolds,labels=FALSE)[sample(1:nSamples)]
 
-# Do the validation
-pred = lapply(1:nFolds,function(i,formula,data){
-	    omit = which(grps == i)
-      z = glm(formula,family=binomial(link='logit'),data=data[-omit,])
-      predictions = predict(z,data[omit,],type='response')
-      predictions = ifelse(predictions > 0.5,1,0)
-      ClasificError = 1-mean(predictions != data[omit,]$PtSnty)
-      ClasificError = mean(predictions == data[omit,]$PtSnty)
-      TruePos = mean((predictions==1) == data[omit,]$PtSnty)
-	    },formula,data)
-
-accuracyVec = mean(unlist(pred))
+# Do the cross validation
+predModelResultsVec = LogisticCrossVal(nIter,nFolds,predictiveModel$formula,
+                                 meanStainCorrected_Tranformed)
+explModelResultsVec = LogisticCrossVal(nIter,nFolds,explanatoryModel$formula,
+                                 meanStainCorrected_Tranformed)
+coinTossModelResultsVec = LogisticCrossVal(nIter,nFolds,predictiveModel$formula,
+                                 meanStainCorrected_Tranformed,coinTossModel=T)
+always1ModelResultsVec = LogisticCrossVal(nIter,nFolds,predictiveModel$formula,
+                                 meanStainCorrected_Tranformed,always1Model=T)
 
 
-
+# Plot the results
+xValidResult = data.frame(Accuracy=c(predModelResultsVec,explModelResultsVec,
+                                     coinTossModelResultsVec,always1ModelResultsVec),
+                          Model=as.factor(c(rep(0,length(predModelResultsVec)),
+                                            rep(1,length(explModelResultsVec)),
+                                            rep(2,length(coinTossModelResultsVec)),
+                                            rep(3,length(always1ModelResultsVec)))))
+ggplot(xValidResult,aes(x=Model,y=Accuracy,fill=Model)) +
+  geom_boxplot() +
+  xlab("") +
+  scale_fill_discrete(breaks=seq(0,3),labels=c("Predictive Model",
+                                               "Explanatory Model",
+                                               "Coin-Toss Model",
+                                               "Always 1 Model"))
 @
 
 Do ROC curve?
