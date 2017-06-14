@@ -314,7 +314,7 @@ def create_cell_mask(voronoi_mask, nuclear_mask, max_cell_area=400):
 
 
 
-def clean_image(img, box_tl, box_width, method="max"):
+def clean_image(img, box_tl, box_width, method="max", skew=0):
     '''
     Use a corner of the image find the amount of antibody that did not wash of slide.
     Use that value o threshold image, removing background noise 
@@ -328,6 +328,7 @@ def clean_image(img, box_tl, box_width, method="max"):
     box = img[box_tl_r:box_tl_r + box_width, box_tl_c:box_tl_c + box_width]
     if (method=="max"): thresh_i = np.max(box)
     if (method=="mean"): thresh_i = np.mean(box)
+    if (method=="qt"): thresh_i = (1+skew)*np.median(box[box>0])
     img[img <= thresh_i] = 0
     return img
 
@@ -351,7 +352,7 @@ def label_image(img, nuclear_mask, cell_mask):
     return overlay
 
 
-def label_all_stains_in_txt(cell_mask, img_text_file, dst_dir, file_out_prefix):
+def label_all_stains_in_txt(cell_mask, img_text_file, dst_dir, file_out_prefix, curate_headers=False):
     '''
     Adds column for cell ID in txt file. Also draws cell bounderies on the other stains.
     
@@ -386,9 +387,11 @@ def label_all_stains_in_txt(cell_mask, img_text_file, dst_dir, file_out_prefix):
     cell_mask_recon = np.reshape(cell_mask_flat, (max_r + 1, max_c + 1))
     labeled_edges = segmentation.find_boundaries(cell_mask_recon, mode='inner')
     for m in marker_list:
-        m_name = m.split('-')[1:]
-        m_name = ''.join(m_name)
-        m_name = m_name.split('(')[0]
+        if curate_headers:
+            m_name = m.split('-')[1:]
+            m_name = ''.join(m_name)
+            m_name = m_name.split('(')[0]
+        else: m_name = m
         print('Drawing mask on', m_name)
 
         marker_intensities = img_txt_df[m]
